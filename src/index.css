@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+/* ============================================
+   BT21 / UNIVERSTAR-inspired Date Quest Theme
+   Warm, rounded, playful Korean pop cartoon aesthetic
+   for a personal love letter to Jennifer
+   ============================================ */
+
+@theme {
+  /* Brand Colors - used everywhere via Tailwind + custom props */
+  --color-romantic-pink: #FF2D95;
+  --color-electric-cyan: #00D4FF;
+  --color-sunny-yellow: #FFE600;
+  --color-deep-purple: #9D4EDD;
+  --color-starlight-cream: #FFF8F0;
+  --color-starlight-blue: #F0F9FF;
+  --color-deep-navy: #0F172A;      /* High-contrast text on all surfaces */
+  --color-charcoal: #1E2937;
+
+  /* Rounded sticker aesthetic */
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+  --radius-pill: 9999px;
+
+  /* Soft inflated shadows for collectible card/sticker feel */
+  --shadow-sticker: 0 10px 30px -10px rgb(0 0 0 / 0.15), 0 4px 6px -1px rgb(0 0 0 / 0.1), inset 0 1px 0 0 rgb(255 255 255 / 0.6);
+  --shadow-sticker-hover: 0 20px 40px -10px rgb(0 0 0 / 0.2), 0 8px 10px -2px rgb(0 0 0 / 0.12), inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+
+  /* Typography - friendly rounded display + readable body */
+  --font-family-display: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Base document styles - mobile first, warm & generous */
+:root {
+  color-scheme: light;
+  --font-display: var(--font-family-display);
+  --font-body: var(--font-family-body);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: linear-gradient(180deg, #FFF8F0 0%, #F0F9FF 100%);
+  color: var(--color-deep-navy);
+  min-height: 100svh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.01em;
+}
+
+/* Headings - warm, large, generous tracking for storybook feel */
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-deep-navy);
+}
+
+h1 {
+  font-size: 2.25rem;
+  line-height: 1.1;
+}
+
+@media (min-width: 640px) {
+  h1 { font-size: 2.75rem; }
+}
+
+/* High contrast guarantee on every surface */
+.text-high-contrast {
+  color: var(--color-deep-navy) !important;
+}
+
+/* Sticker / Card aesthetic helpers */
+.sticker-card {
+  background: white;
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-sticker);
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.sticker-card:hover, .sticker-card.selected {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: var(--shadow-sticker-hover);
+}
+
+.sticker-card.selected {
+  border-color: var(--color-romantic-pink);
+  box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.15), var(--shadow-sticker-hover);
+}
+
+/* Pill buttons - soft, huggable */
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  transition: all 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pill-button.primary {
+  background: var(--color-romantic-pink);
+  color: white;
+  box-shadow: 0 4px 14px -2px rgb(255 45 149 / 0.4);
+}
+
+.pill-button.primary:hover {
+  background: #E61A7D;
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 20px -2px rgb(255 45 149 / 0.5);
+}
+
+.pill-button.secondary {
+  background: var(--color-starlight-cream);
+  color: var(--color-deep-navy);
+  border: 2px solid var(--color-deep-purple);
+}
+
+.pill-button.secondary:hover {
+  background: var(--color-deep-purple);
+  color: white;
+  border-color: var(--color-deep-purple);
+}
+
+/* Small accent buttons for choices */
+.choice-pill {
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: all 0.1s ease;
+  border: 2px solid transparent;
+  background: white;
+  color: var(--color-deep-navy);
+  box-shadow: 0 2px 8px -1px rgb(0 0 0 / 0.08);
+}
+
+.choice-pill:hover {
+  transform: scale(1.02);
+  border-color: var(--color-electric-cyan);
+}
+
+.choice-pill.selected {
+  background: var(--color-electric-cyan);
+  color: var(--color-deep-navy);
+  border-color: var(--color-deep-navy);
+  font-weight: 600;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+}
+
+/* Progress stars */
+.progress-star {
+  width: 1.5rem;
+  height: 1.5rem;
+  transition: transform 0.2s ease, fill 0.2s ease;
+}
+
+.progress-star.active {
+  transform: scale(1.15);
+  fill: var(--color-sunny-yellow);
+}
+
+.progress-star.completed {
+  fill: var(--color-romantic-pink);
+}
+
+/* Date ticket / star chart cards */
+.date-ticket {
+  background: linear-gradient(145deg, white 0%, #FFF8F0 100%);
+  border-radius: var(--radius-2xl);
+  padding: 1rem 1.25rem;
+  border: 2px solid #E2E8F0;
+  transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.date-ticket:hover {
+  border-color: var(--color-deep-purple);
+  transform: translateY(-2px);
+}
+
+.date-ticket.selected {
+  border-color: var(--color-romantic-pink);
+  background: linear-gradient(145deg, #FFF0F7 0%, #FFF8F0 100%);
+  box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.15);
+}
+
+.date-ticket .weekday {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-deep-purple);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.date-ticket .day {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-deep-navy);
+  font-family: var(--font-display);
+}
+
+.date-ticket .month {
+  font-size: 0.8125rem;
+  color: var(--color-charcoal);
+}
+
+/* Couple cartoon - rounded play space */
+.couple-cartoon {
+  transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Celebration sparkles and soft glows */
+.sparkle {
+  position: absolute;
+  color: var(--color-sunny-yellow);
+  animation: sparkle-twinkle 1.4s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* Gentle toast / feedback (sonner will style, these are fallbacks) */
+.toast {
+  background: white;
+  border: 2px solid var(--color-romantic-pink);
+  border-radius: var(--radius-2xl);
+  padding: 0.75rem 1.25rem;
+  box-shadow: var(--shadow-sticker);
+  font-weight: 500;
+}
+
+/* Reduced motion respect - used by framer and CSS */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .couple-cartoon:hover,
+  .sticker-card:hover {
+    transform: none;
+  }
+}
+
+/* Mobile thumb-friendly tap targets */
+button, [role="button"], .choice-pill, .pill-button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Utility: soft inner highlight for inflated sticker look */
+.inner-highlight {
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.8);
+}
+
+/* Ensure no horizontal scroll ever */
+html, body {
+  overflow-x: hidden;
+}
