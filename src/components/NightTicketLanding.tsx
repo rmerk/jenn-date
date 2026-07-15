@@ -38,9 +38,11 @@ export function NightTicketLanding({ onStart }: NightTicketLandingProps) {
             </div>
 
             <h1 className="night-ticket__brand">
-              Our Little
+              An exclusive
               <br />
-              Universe
+              gathering with
+              <br />
+              Ryan Choi
             </h1>
 
             <p className="night-ticket__greeting">Hey Jennifer</p>
@@ -58,7 +60,7 @@ export function NightTicketLanding({ onStart }: NightTicketLandingProps) {
             </div>
             <div className="text-right">
               <p className="night-ticket__meta-label">Destination</p>
-              <p className="night-ticket__meta-value">US</p>
+              <p className="night-ticket__meta-value">Together</p>
             </div>
           </div>
 

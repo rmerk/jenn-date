@@ -613,13 +613,12 @@ html, body {
 .night-ticket__brand {
   font-family: 'Barlow Condensed', system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--night-deep);
-  font-size: clamp(2rem, 8vw, 2.75rem);
-  line-height: 1;
+  font-size: clamp(1.625rem, 6.5vw, 2.25rem);
+  line-height: 1.05;
   margin: 1.25rem 0 0;
-  text-transform: uppercase;
 }
 
 .night-ticket__greeting {
@@ -822,7 +821,7 @@ html, body {
   background: var(--color-night-dusk);
   border-radius: 50%;
   top: auto;
-  bottom: 3.35rem;
+  bottom: 52px;
   z-index: 2;
 }
 
@@ -894,6 +893,11 @@ html, body {
 .quest-ticket__perforation {
   margin: 1.25rem 1.15rem;
   border-top: 2px dashed rgba(15, 31, 31, 0.22);
+}
+
+/* Bottom tear line: buttons fill flush to the dashed edge */
+.quest-ticket__body + .quest-ticket__perforation {
+  margin-bottom: 0;
 }
 
 .quest-ticket__tear {
