@@ -1,20 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Toaster, toast } from 'sonner';
 
-import { CoupleCartoon } from './components/CoupleCartoon';
 import type { QuestAnswers, LockedPlan } from './lib/types';
-import { TOTAL_QUESTIONS, getQuestion, isQuestComplete, canJumpToStep, getVibeCategoryLabel, RESTAURANT_CUISINE_OPTIONS, OUTING_ACTIVITY_OPTIONS, isStep2Complete, formatFoodAnswer, formatOutingAnswer, deriveFoodFantasy, deriveOutingFoodFantasy, getStep2Copy, isOutingStepVibe } from './lib/questions';
+import { TOTAL_QUESTIONS, getQuestion, isQuestComplete, canJumpToStep, RESTAURANT_CUISINE_OPTIONS, OUTING_ACTIVITY_OPTIONS, isStep2Complete, deriveFoodFantasy, deriveOutingFoodFantasy, getStep2Copy, isOutingStepVibe } from './lib/questions';
 import { ProgressStars } from './components/ProgressStars';
 import { QuestionCard } from './components/QuestionCard';
 import { DateSelector } from './components/DateSelector';
-import { ConstellationMap } from './components/ConstellationMap';
-import { drawConstellationToCanvas } from './lib/constellation';
 import { generateLoveBriefMarkdown, generateLoveBriefICS, downloadTextFile, downloadCalendarICS, isFutureDate, isDatePassed, isChosenDateToday, formatLockedDate, formatDateForDisplay, DEFAULT_CHOSEN_TIME } from './lib/utils';
-import { getShortSweetNote } from './lib/loveMessage';
-import { getWhisperForPlan, CLOSE_PHRASES } from './lib/whisperPrompts';
-import { getAnticipationForPlan } from './lib/anticipationPrompts';
+import { getShortSweetNote, getPersonalizedLoveMessage } from './lib/loveMessage';
 import { loadLockedPlan, saveLockedPlan, clearLockedPlan, archiveCurrentPlan } from './lib/planStorage';
 import { loadQuestProgress, saveQuestProgress, clearQuestProgress } from './lib/questProgress';
 import { NightTicketLanding } from './components/NightTicketLanding';
@@ -102,16 +96,7 @@ export default function App() {
 
   const { mode, currentStep, answers, lockedPlan, showLoveMessage } = state;
 
-  const [showWhisper, setShowWhisper] = useState(false);
-  const [currentWhisper, setCurrentWhisper] = useState('');
   const [debriefHighlight, setDebriefHighlight] = useState(() => loadLockedPlan()?.debriefHighlight ?? '');
-  const [anticipationLine, setAnticipationLine] = useState('');
-  const [showLockedMore, setShowLockedMore] = useState(false);
-  const [showCelebrationMore, setShowCelebrationMore] = useState(false);
-  const whisperOpenerRef = useRef<HTMLButtonElement>(null);
-  const whisperCloseRef = useRef<HTMLButtonElement>(null);
-  const whisperTitleId = 'whisper-dialog-title';
-
   // Persist quest progress (answers + step) so reload picks up where she left off
   useEffect(() => {
     if (lockedPlan) return;
@@ -126,15 +111,7 @@ export default function App() {
 
   useEffect(() => {
     setDebriefHighlight(lockedPlan?.debriefHighlight ?? '');
-    setShowLockedMore(false);
   }, [lockedPlan?.chosenDate, lockedPlan?.debriefHighlight]);
-
-  useEffect(() => {
-    if (lockedPlan && isFutureDate(lockedPlan.chosenDate)) {
-      const { daysUntil } = formatDateForDisplay(lockedPlan.chosenDate);
-      setAnticipationLine(getAnticipationForPlan(lockedPlan, daysUntil));
-    }
-  }, [lockedPlan?.chosenDate, lockedPlan?.vibe, lockedPlan?.foodFantasy]);
 
   // ==================== NAVIGATION ====================
   const goToStep = (step: number) => {
@@ -357,7 +334,6 @@ export default function App() {
 
     // Reveal the real message + switch to locked celebration view
     setDebriefHighlight('');
-    setShowCelebrationMore(false);
     setState((s) => ({
       ...s,
       lockedPlan: fullPlan,
@@ -370,24 +346,10 @@ export default function App() {
     });
   };
 
-  const tweakPlan = () => {
-    // Return to quest pre-filled with current (or locked) answers — the most loving UX
-    const base = lockedPlan || (answers as QuestAnswers);
-    setState({
-      mode: 'quest',
-      currentStep: 1,
-      answers: { ...DEFAULT_ANSWERS, ...base },
-      lockedPlan: null,
-      showLoveMessage: false,
-    });
-    clearLockedPlan();
-  };
-
   /** From celebration: jump to a specific quest step to change that answer. */
   const editStep = (step: number) => {
     const base = lockedPlan || answers;
     if (lockedPlan) clearLockedPlan();
-    setShowCelebrationMore(false);
     setState({
       mode: 'quest',
       currentStep: Math.max(1, Math.min(TOTAL_QUESTIONS, step)),
@@ -397,21 +359,6 @@ export default function App() {
     });
   };
 
-  const clearEverything = () => {
-    if (!confirm('Are you sure you want to clear our beautiful plan? We can always start again.')) return;
-    clearLockedPlan();
-    clearQuestProgress();
-    setDebriefHighlight('');
-    setState({
-      mode: 'landing',
-      currentStep: 1,
-      answers: DEFAULT_ANSWERS,
-      lockedPlan: null,
-      showLoveMessage: false,
-    });
-    toast('Cleared. Start fresh whenever you want.');
-  };
-
   const copySweetNote = () => {
     if (!lockedPlan) return;
     const note = getShortSweetNote(lockedPlan);
@@ -419,122 +366,6 @@ export default function App() {
       toast.success('Sweet note copied — paste it into your calendar or a card.');
     });
   };
-
-  // Beautiful zero-dependency keepsake card PNG — now featuring her real constellation
-  const downloadKeepsake = () => {
-    if (!lockedPlan) return;
-
-    const w = 880;
-    const h = 660;
-    const dpr = 2; // crisp on retina + good for printing
-    const canvas = document.createElement('canvas');
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    const ctx = canvas.getContext('2d', { alpha: true })!;
-    ctx.scale(dpr, dpr);
-
-    // Dusk ticket background
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#2a5550');
-    grad.addColorStop(0.45, '#1e3a3a');
-    grad.addColorStop(1, '#0f1f1f');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Cream ticket panel
-    ctx.fillStyle = '#f7f0e4';
-    ctx.beginPath();
-    ctx.roundRect(40, 40, w - 80, h - 80, 4);
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(240,163,94,0.35)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(40, 40, w - 80, h - 80, 4);
-    ctx.stroke();
-
-    // Title
-    ctx.fillStyle = '#f0a35e';
-    ctx.font = '600 20px "Barlow Condensed", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('THE MAP OF THE NIGHT WE CHOSE', w / 2, 96);
-
-    // Big date
-    ctx.fillStyle = '#0f1f1f';
-    ctx.font = '700 36px "Barlow Condensed", system-ui, sans-serif';
-    ctx.fillText(formatLockedDate(lockedPlan.chosenDate, lockedPlan.chosenTime), w / 2, 146);
-
-    // Her constellation — same seed and sky as the on-screen map
-    drawConstellationToCanvas(ctx, lockedPlan, 110, 176, w - 220, 296);
-
-    // Vibe + food line
-    ctx.fillStyle = '#0f1f1f';
-    ctx.font = '500 20px Figtree, system-ui, sans-serif';
-    ctx.fillText(
-      `${getVibeCategoryLabel(lockedPlan.vibe)} · ${
-        isOutingStepVibe(lockedPlan.vibe)
-          ? formatOutingAnswer(lockedPlan)
-          : formatFoodAnswer(lockedPlan)
-      }`,
-      w / 2,
-      520,
-    );
-
-    // Bottom love line
-    ctx.fillStyle = '#f0a35e';
-    ctx.font = '700 18px "Barlow Condensed", system-ui, sans-serif';
-    ctx.fillText('LOCKED IN — OUR NIGHT', w / 2, 560);
-
-    // Decorative stars
-    ctx.fillStyle = '#f0a35e';
-    ctx.font = '26px system-ui';
-    ctx.fillText('✧', 110, 120);
-    ctx.fillText('✧', w - 120, 120);
-    ctx.fillText('✧', 128, h - 84);
-    ctx.fillText('✧', w - 138, h - 84);
-
-    // Trigger download
-    const link = document.createElement('a');
-    link.download = `our-constellation-${lockedPlan.chosenDate}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
-    toast.success('Your constellation keepsake is saved — print it, frame it, or hide it somewhere only she will find.');
-  };
-
-  // Feature 4: "Whisper this to me tonight" — opens a private modal with one of the husband-seeded lines
-  const openWhisper = () => {
-    if (!lockedPlan) return;
-    const whisper = getWhisperForPlan(lockedPlan);
-    setCurrentWhisper(whisper);
-    setShowWhisper(true);
-  };
-
-  const closeWhisper = () => {
-    setShowWhisper(false);
-    requestAnimationFrame(() => {
-      whisperOpenerRef.current?.focus();
-    });
-  };
-
-  // Simple keyboard escape for the whisper modal
-  useEffect(() => {
-    if (!showWhisper) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowWhisper(false);
-        requestAnimationFrame(() => whisperOpenerRef.current?.focus());
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [showWhisper]);
-
-  useEffect(() => {
-    if (showWhisper) {
-      whisperCloseRef.current?.focus();
-    }
-  }, [showWhisper]);
 
   // ==================== FEATURE 2: LOVE BRIEF (husband-only, invisible to Jennifer) ====================
   const badgeRef = useRef<HTMLDivElement>(null);
@@ -638,20 +469,6 @@ export default function App() {
     toast.success('Calendar file downloaded — open it to add the date.');
   };
 
-  const copyAnticipation = () => {
-    navigator.clipboard.writeText(anticipationLine).then(() => {
-      toast.success('Copied — send it back if you want.');
-    });
-  };
-
-  const refreshAnticipation = () => {
-    if (!lockedPlan) return;
-    const { daysUntil } = formatDateForDisplay(lockedPlan.chosenDate);
-    setAnticipationLine(getAnticipationForPlan(lockedPlan, daysUntil));
-  };
-
-  // Persist debrief back into LockedPlan on blur
-
   // ==================== RENDER ====================
   const currentQuestion = getQuestion(currentStep);
   const step2Copy = currentStep === 2 ? getStep2Copy(answers.vibe) : null;
@@ -717,10 +534,6 @@ export default function App() {
       {mode === 'landing' && lockedPlan && (
         <div className="pt-16 sm:pt-20 px-6 max-w-3xl mx-auto text-center">
             <div className="space-y-6 pt-6">
-              <div className="flex justify-center">
-                <CoupleCartoon size={200} />
-              </div>
-
               <div>
                 <div className="uppercase tracking-[3px] text-xs text-night-amber mb-2">
                   {isDatePassed(lockedPlan.chosenDate)
@@ -741,42 +554,21 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="max-w-lg mx-auto w-full">
-                <div className="sticker-card p-4 sm:p-6 min-h-[220px] sm:min-h-[260px]">
-                  <ConstellationMap plan={lockedPlan} />
+              <div className="max-w-lg mx-auto w-full text-left">
+                <div className="celeb-reveal__love-card whitespace-pre-wrap">
+                  {getPersonalizedLoveMessage(lockedPlan)}
                 </div>
-                <p className="text-xs text-night-cream/65 mt-2">
-                  {formatLockedDate(lockedPlan.chosenDate, lockedPlan.chosenTime)} · {getVibeCategoryLabel(lockedPlan.vibe)} ·{' '}
-                  {isOutingStepVibe(lockedPlan.vibe)
-                    ? formatOutingAnswer(lockedPlan)
-                    : formatFoodAnswer(lockedPlan)}
-                </p>
+                <div className="flex flex-col sm:flex-row gap-2 mt-4 justify-center">
+                  <button type="button" onClick={copySweetNote} className="pill-button secondary text-sm">
+                    Copy note
+                  </button>
+                  {isFutureDate(lockedPlan.chosenDate) && (
+                    <button type="button" onClick={addToCalendar} className="pill-button primary text-sm">
+                      Add to calendar
+                    </button>
+                  )}
+                </div>
               </div>
-
-              {isFutureDate(lockedPlan.chosenDate) && anticipationLine && (
-                <div className="max-w-md mx-auto space-y-2">
-                  <div className="text-xs tracking-widest text-night-amber uppercase">From me, before the date</div>
-                  <blockquote className="anticipation-quote text-[15px] leading-relaxed text-night-cream/90">
-                    {anticipationLine}
-                  </blockquote>
-                  <div className="flex justify-center gap-4 text-sm">
-                    <button
-                      type="button"
-                      onClick={copyAnticipation}
-                      className="underline text-night-cream/65 hover:text-night-amber"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={refreshAnticipation}
-                      className="underline text-night-cream/65 hover:text-night-amber"
-                    >
-                      Another one
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {isDatePassed(lockedPlan.chosenDate) && (
                 <div className="max-w-md mx-auto text-left">
@@ -791,40 +583,13 @@ export default function App() {
                 </div>
               )}
 
-              <div className="flex flex-col items-center gap-3 pt-2">
-                {isFutureDate(lockedPlan.chosenDate) && (
-                  <button type="button" onClick={addToCalendar} className="pill-button primary">
-                    Add to calendar
-                  </button>
-                )}
-                {isDatePassed(lockedPlan.chosenDate) && (
+              {isDatePassed(lockedPlan.chosenDate) && (
+                <div className="flex flex-col items-center gap-3 pt-2">
                   <button type="button" onClick={planAnother} className="pill-button primary">
                     Plan our next date
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowLockedMore((open) => !open)}
-                  aria-expanded={showLockedMore}
-                  className="text-sm text-night-cream/65 hover:text-night-amber underline"
-                >
-                  {showLockedMore ? 'Fewer options' : 'More options'}
-                </button>
-                {showLockedMore && (
-                  <div className="flex flex-col items-center gap-2 w-full max-w-xs">
-                    <button type="button" onClick={tweakPlan} className="pill-button secondary text-sm w-full">
-                      Ask me to change something
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clearEverything}
-                      className="text-sm text-night-cream/65 hover:text-night-amber underline"
-                    >
-                      Clear everything
-                    </button>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
         </div>
       )}
@@ -998,17 +763,10 @@ export default function App() {
           answers={answers as QuestAnswers}
           lockedPlan={lockedPlan}
           showLoveMessage={showLoveMessage}
-          showCelebrationMore={showCelebrationMore}
           onLock={lockDateInHeart}
           onCopyNote={copySweetNote}
           onAddToCalendar={addToCalendar}
-          onToggleMore={() => setShowCelebrationMore((open) => !open)}
-          onDownloadKeepsake={downloadKeepsake}
-          onOpenWhisper={openWhisper}
-          onTweak={tweakPlan}
           onEditStep={editStep}
-          onClear={clearEverything}
-          whisperOpenerRef={whisperOpenerRef}
         />
       )}
 
@@ -1031,70 +789,6 @@ export default function App() {
           MADE FOR YOU
         </div>
       )}
-
-      {/* Feature 4: Whisper modal */}
-      <AnimatePresence>
-        {showWhisper && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-night-deep/70 px-4"
-            onClick={closeWhisper}
-          >
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={whisperTitleId}
-              initial={{ opacity: 0, y: 16, scale: 0.985 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.99 }}
-              transition={{ type: 'spring', stiffness: 180, damping: 22 }}
-              className="w-full max-w-md"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="sticker-card p-8 sm:p-9 text-center">
-                <h2 id={whisperTitleId} className="sr-only">
-                  Something to say tonight
-                </h2>
-                <div
-                  className="text-[15.5px] leading-relaxed text-night-deep/90"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {currentWhisper}
-                </div>
-
-                <div className="mt-8 flex flex-col items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!lockedPlan) return;
-                      setCurrentWhisper(getWhisperForPlan(lockedPlan));
-                    }}
-                    className="text-sm text-night-deep/70 hover:text-night-amber underline transition"
-                  >
-                    Another one
-                  </button>
-                  <button
-                    ref={whisperCloseRef}
-                    type="button"
-                    onClick={closeWhisper}
-                    className="pill-button secondary text-sm mt-1"
-                  >
-                    {CLOSE_PHRASES[0]}
-                  </button>
-                  {lockedPlan && (
-                    <div className="mt-4">
-                      <CoupleCartoon size={96} alt="Us" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

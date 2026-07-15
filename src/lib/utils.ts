@@ -10,7 +10,7 @@ import {
   getVibeCategoryLabel,
   formatRestaurantDetail,
 } from './questions';
-import { getConstellationIdeas } from './planIdeas';
+import { getChoiceAlignedPlan, getConstellationIdeas } from './planIdeas';
 
 export { getConstellationIdeas } from './planIdeas';
 
@@ -246,8 +246,8 @@ ${getLoveMessage(plan)}
 
 ———
 YOUR NOTES (morning after)
-• 
-• 
+•
+•
 
 Generated when she locked the date. Stays on your devices only.
 `.trim();
@@ -278,23 +278,27 @@ export function generateLoveBriefICS(plan: LockedPlan): string {
   ].join('\r\n');
 }
 
-/** Jennifer-facing calendar event — short and practical, no husband brief embedded. */
+/** Escape text for ICS SUMMARY/DESCRIPTION fields. */
+function escapeIcsText(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+}
+
+/** Jennifer-facing calendar event — built from her quest selections. */
 export function generateJenniferCalendarICS(plan: LockedPlan): string {
-  const date = new Date(plan.chosenDate + 'T00:00:00');
   const { start, end } = getPlanIcsWindow(plan);
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const timeLabel = formatTimeForDisplay(plan.chosenTime ?? DEFAULT_CHOSEN_TIME);
+  const rows = getChoiceAlignedPlan(plan);
+  const foodOrOuting = rows.find((row) => row.from === 'food');
+  const highlight = foodOrOuting?.choice?.trim() || getVibeCategoryLabel(plan.vibe);
 
-  const summary = `Date night — ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
-  const desc = [
-    `Vibe: ${getVibeCategoryLabel(plan.vibe)}`,
-    `Food: ${getFoodCategoryLabel(plan.foodFantasy)}`,
-    `Starts at ${timeLabel}`,
-    '',
-    'Planned in Our Little Universe.',
-  ]
-    .join('\\n')
-    .replace(/,/g, '\\,');
+  const summary = escapeIcsText(`Our night · ${highlight}`);
+  const description = escapeIcsText(
+    rows.map((row) => `${row.label}: ${row.choice}`).join('\n'),
+  );
 
   return [
     'BEGIN:VCALENDAR',
@@ -306,7 +310,7 @@ export function generateJenniferCalendarICS(plan: LockedPlan): string {
     `DTSTART:${start}`,
     `DTEND:${end}`,
     `SUMMARY:${summary}`,
-    `DESCRIPTION:${desc}`,
+    `DESCRIPTION:${description}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');
