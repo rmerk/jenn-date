@@ -1,42 +1,52 @@
 @import "tailwindcss";
 
 /* ============================================
-   BT21 / UNIVERSTAR-inspired Date Quest Theme
-   Warm, rounded, playful Korean pop cartoon aesthetic
-   for a personal love letter to Jennifer
+   Night Ticket theme — Our Little Universe
+   Dusk atmosphere, cream ticket surfaces, amber accents
    ============================================ */
 
 @theme {
-  /* Brand Colors - used everywhere via Tailwind + custom props */
-  --color-romantic-pink: #FF2D95;
-  --color-electric-cyan: #00D4FF;
-  --color-sunny-yellow: #FFE600;
-  --color-deep-purple: #9D4EDD;
-  --color-starlight-cream: #FFF8F0;
-  --color-starlight-blue: #F0F9FF;
-  --color-deep-navy: #0F172A;      /* High-contrast text on all surfaces */
-  --color-charcoal: #1E2937;
+  /* Night Ticket palette (source of truth) */
+  --color-night-dusk: #1e3a3a;
+  --color-night-mid: #2a5550;
+  --color-night-amber: #f0a35e;
+  --color-night-cream: #f7f0e4;
+  --color-night-deep: #0f1f1f;
 
-  /* Rounded sticker aesthetic */
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
-  --radius-3xl: 1.75rem;
+  /* Semantic aliases used across components */
+  --color-deep-navy: #0f1f1f;
+  --color-charcoal: #1a2e2e;
+  --color-starlight-cream: #f7f0e4;
+
+  /* Legacy names remapped so existing utilities don't fight the theme */
+  --color-romantic-pink: #f0a35e;
+  --color-electric-cyan: #f0a35e;
+  --color-sunny-yellow: #f0a35e;
+  --color-deep-purple: #c4b8a8;
+  --color-starlight-blue: #1e3a3a;
+
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.5rem;
+  --radius-ticket: 4px;
   --radius-pill: 9999px;
 
-  /* Soft inflated shadows for collectible card/sticker feel */
-  --shadow-sticker: 0 10px 30px -10px rgb(0 0 0 / 0.15), 0 4px 6px -1px rgb(0 0 0 / 0.1), inset 0 1px 0 0 rgb(255 255 255 / 0.6);
-  --shadow-sticker-hover: 0 20px 40px -10px rgb(0 0 0 / 0.2), 0 8px 10px -2px rgb(0 0 0 / 0.12), inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+  --shadow-sticker: 0 16px 40px -18px rgb(0 0 0 / 0.45), 0 0 0 1px rgba(240, 163, 94, 0.18);
+  --shadow-sticker-hover: 0 22px 48px -16px rgb(0 0 0 / 0.55), 0 0 0 1px rgba(240, 163, 94, 0.28);
 
-  /* Typography - friendly rounded display + readable body */
-  --font-family-display: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-family-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-display: 'Barlow Condensed', system-ui, sans-serif;
+  --font-family-body: 'Figtree', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-ticket: 'Barlow Condensed', system-ui, sans-serif;
 }
 
-/* Base document styles - mobile first, warm & generous */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   --font-display: var(--font-family-display);
   --font-body: var(--font-family-body);
+  --night-dusk: #1e3a3a;
+  --night-amber: #f0a35e;
+  --night-cream: #f7f0e4;
+  --night-deep: #0f1f1f;
 }
 
 html {
@@ -45,56 +55,94 @@ html {
 
 body {
   font-family: var(--font-body);
-  background: linear-gradient(180deg, #FFF8F0 0%, #F0F9FF 100%);
-  color: var(--color-deep-navy);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(240, 163, 94, 0.28), transparent 55%),
+    linear-gradient(180deg, #2a5550 0%, #1e3a3a 45%, #0f1f1f 100%);
+  color: var(--color-night-cream);
   min-height: 100svh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: 0.01em;
 }
 
-/* Headings - warm, large, generous tracking for storybook feel */
+/* Headings on dusk — cream; ticket panels override to deep */
 h1, h2, h3, .display {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--color-deep-navy);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-night-cream);
 }
 
 h1 {
   font-size: 2.25rem;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 @media (min-width: 640px) {
   h1 { font-size: 2.75rem; }
 }
 
-/* High contrast guarantee on every surface */
 .text-high-contrast {
-  color: var(--color-deep-navy) !important;
+  color: var(--color-night-cream) !important;
 }
 
-/* Sticker / Card aesthetic helpers */
+/* Cream ticket panels (remapped from sticker-card) */
 .sticker-card {
-  background: white;
-  border-radius: var(--radius-3xl);
+  background: var(--color-night-cream);
+  color: var(--color-night-deep);
+  border-radius: var(--radius-ticket);
   box-shadow: var(--shadow-sticker);
   transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.2s ease;
-  border: 1px solid rgba(0,0,0,0.04);
+  border: 1px solid rgba(240, 163, 94, 0.2);
+}
+
+.sticker-card h1,
+.sticker-card h2,
+.sticker-card h3 {
+  color: var(--color-night-deep);
+  text-transform: none;
+  letter-spacing: -0.02em;
+  font-family: var(--font-body);
+  font-weight: 600;
 }
 
 .sticker-card:hover, .sticker-card.selected {
-  transform: translateY(-2px) scale(1.01);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-sticker-hover);
 }
 
 .sticker-card.selected {
-  border-color: var(--color-romantic-pink);
-  box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.15), var(--shadow-sticker-hover);
+  border-color: var(--color-night-amber);
+  box-shadow: 0 0 0 3px rgba(240, 163, 94, 0.22), var(--shadow-sticker-hover);
 }
 
-/* Pill buttons - soft, huggable */
+.sticker-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-night-cream), 0 0 0 4px var(--color-night-amber), var(--shadow-sticker);
+}
+
+.anticipation-quote {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-style: italic;
+  border: none;
+  color: var(--color-night-cream);
+}
+
+.anticipation-quote::before {
+  content: '\201C';
+  color: var(--color-night-amber);
+  margin-right: 0.1em;
+}
+
+.anticipation-quote::after {
+  content: '\201D';
+  color: var(--color-night-amber);
+  margin-left: 0.1em;
+}
+
+/* Ticket CTAs */
 .pill-button {
   display: inline-flex;
   align-items: center;
@@ -102,9 +150,10 @@ h1 {
   padding: 0.875rem 1.75rem;
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1rem;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   transition: all 0.15s cubic-bezier(0.23, 1, 0.32, 1);
   cursor: pointer;
   border: none;
@@ -113,56 +162,56 @@ h1 {
 }
 
 .pill-button.primary {
-  background: var(--color-romantic-pink);
-  color: white;
-  box-shadow: 0 4px 14px -2px rgb(255 45 149 / 0.4);
+  background: var(--color-night-deep);
+  color: var(--color-night-cream);
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.5);
 }
 
 .pill-button.primary:hover {
-  background: #E61A7D;
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 6px 20px -2px rgb(255 45 149 / 0.5);
+  background: var(--color-night-amber);
+  color: var(--color-night-deep);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px -8px rgba(240, 163, 94, 0.45);
 }
 
 .pill-button.secondary {
-  background: var(--color-starlight-cream);
-  color: var(--color-deep-navy);
-  border: 2px solid var(--color-deep-purple);
+  background: var(--color-night-cream);
+  color: var(--color-night-deep);
+  border: 2px solid var(--color-night-deep);
 }
 
 .pill-button.secondary:hover {
-  background: var(--color-deep-purple);
-  color: white;
-  border-color: var(--color-deep-purple);
+  background: var(--color-night-deep);
+  color: var(--color-night-cream);
+  border-color: var(--color-night-deep);
 }
 
-/* Small accent buttons for choices */
 .choice-pill {
   padding: 0.625rem 1.25rem;
   border-radius: var(--radius-pill);
   font-size: 0.9375rem;
   font-weight: 500;
+  font-family: var(--font-body);
   transition: all 0.1s ease;
   border: 2px solid transparent;
-  background: white;
-  color: var(--color-deep-navy);
-  box-shadow: 0 2px 8px -1px rgb(0 0 0 / 0.08);
+  background: var(--color-night-cream);
+  color: var(--color-night-deep);
+  box-shadow: 0 4px 14px -6px rgb(0 0 0 / 0.35);
 }
 
 .choice-pill:hover {
   transform: scale(1.02);
-  border-color: var(--color-electric-cyan);
+  border-color: var(--color-night-amber);
 }
 
 .choice-pill.selected {
-  background: var(--color-electric-cyan);
-  color: var(--color-deep-navy);
-  border-color: var(--color-deep-navy);
+  background: var(--color-night-amber);
+  color: var(--color-night-deep);
+  border-color: var(--color-night-deep);
   font-weight: 600;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(240, 163, 94, 0.25);
 }
 
-/* Progress stars */
 .progress-star {
   width: 1.5rem;
   height: 1.5rem;
@@ -171,65 +220,190 @@ h1 {
 
 .progress-star.active {
   transform: scale(1.15);
-  fill: var(--color-sunny-yellow);
+  fill: var(--color-night-amber);
 }
 
 .progress-star.completed {
-  fill: var(--color-romantic-pink);
+  fill: var(--color-night-cream);
 }
 
-/* Date ticket / star chart cards */
-.date-ticket {
-  background: linear-gradient(145deg, white 0%, #FFF8F0 100%);
-  border-radius: var(--radius-2xl);
-  padding: 1rem 1.25rem;
-  border: 2px solid #E2E8F0;
-  transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
-  position: relative;
-  overflow: hidden;
+/* Night calendar — compact week grid for date picking */
+.night-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
 }
 
-.date-ticket:hover {
-  border-color: var(--color-deep-purple);
-  transform: translateY(-2px);
-}
-
-.date-ticket.selected {
-  border-color: var(--color-romantic-pink);
-  background: linear-gradient(145deg, #FFF0F7 0%, #FFF8F0 100%);
-  box-shadow: 0 0 0 3px rgba(255, 45, 149, 0.15);
-}
-
-.date-ticket .weekday {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-deep-purple);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.date-ticket .day {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--color-deep-navy);
+.night-cal__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-night-deep);
+  padding-bottom: 0.15rem;
+  border-bottom: 2px dashed rgba(15, 31, 31, 0.16);
 }
 
-.date-ticket .month {
+.night-cal__summary-star {
+  color: var(--color-night-amber);
+}
+
+.night-cal__summary-sep {
+  margin: 0 0.35rem;
+  color: rgba(15, 31, 31, 0.35);
+}
+
+.night-cal__summary-muted {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgba(15, 31, 31, 0.5);
+  text-transform: none;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+
+.night-cal__month-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.night-cal__month {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.45);
+}
+
+.night-cal__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.night-cal__weekdays,
+.night-cal__week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.night-cal__weekday {
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.4);
+  padding: 0.15rem 0 0.35rem;
+}
+
+.night-cal__weekday.is-weekend {
+  color: var(--color-night-amber);
+}
+
+.night-cal__cell {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 0; /* override global button min-width so 7-col fits phones */
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-night-deep);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.night-cal__cell.is-empty {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.night-cal__cell.is-weekend:not(.is-selected):not(.is-disabled) {
+  color: color-mix(in srgb, var(--color-night-amber) 72%, var(--color-night-deep));
+}
+
+.night-cal__cell:hover:not(:disabled):not(.is-selected) {
+  border-color: rgba(240, 163, 94, 0.55);
+  background: rgba(240, 163, 94, 0.12);
+}
+
+.night-cal__cell.is-selected {
+  background: var(--color-night-amber);
+  border-color: var(--color-night-deep);
+  color: var(--color-night-deep);
+  box-shadow: 0 0 0 1px var(--color-night-deep);
+}
+
+.night-cal__cell.is-disabled,
+.night-cal__cell:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.night-cal__cell:focus-visible {
+  outline: 2px solid var(--color-night-amber);
+  outline-offset: 2px;
+}
+
+.night-cal__time {
+  padding-top: 0.15rem;
+  border-top: 2px dashed rgba(15, 31, 31, 0.16);
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
+}
+
+.night-cal__time.is-active {
+  opacity: 1;
+}
+
+.night-cal__time-hint {
+  margin: 0;
   font-size: 0.8125rem;
-  color: var(--color-charcoal);
+  color: rgba(15, 31, 31, 0.45);
 }
 
-/* Couple cartoon - rounded play space */
+.night-cal__custom-time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.night-cal__time-input {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 7.5rem;
+}
+
 .couple-cartoon {
   transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* Celebration sparkles and soft glows */
 .sparkle {
   position: absolute;
-  color: var(--color-sunny-yellow);
+  color: var(--color-night-amber);
   animation: sparkle-twinkle 1.4s infinite ease-in-out;
   pointer-events: none;
 }
@@ -239,17 +413,16 @@ h1 {
   50% { opacity: 1; transform: scale(1); }
 }
 
-/* Gentle toast / feedback (sonner will style, these are fallbacks) */
 .toast {
-  background: white;
-  border: 2px solid var(--color-romantic-pink);
-  border-radius: var(--radius-2xl);
+  background: var(--color-night-cream);
+  border: 2px solid var(--color-night-amber);
+  border-radius: var(--radius-ticket);
   padding: 0.75rem 1.25rem;
   box-shadow: var(--shadow-sticker);
   font-weight: 500;
+  color: var(--color-night-deep);
 }
 
-/* Reduced motion respect - used by framer and CSS */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -257,25 +430,973 @@ h1 {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .couple-cartoon:hover,
   .sticker-card:hover {
     transform: none;
   }
 }
 
-/* Mobile thumb-friendly tap targets */
 button, [role="button"], .choice-pill, .pill-button {
   min-height: 44px;
   min-width: 44px;
 }
 
-/* Utility: soft inner highlight for inflated sticker look */
 .inner-highlight {
-  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.8);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.35);
 }
 
-/* Ensure no horizontal scroll ever */
 html, body {
   overflow-x: hidden;
+}
+
+/* Universe badge on dusk */
+.universe-badge {
+  border-radius: 9999px;
+  background: rgba(15, 31, 31, 0.55);
+  backdrop-filter: blur(10px);
+  padding: 0.25rem 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 228, 0.85);
+  box-shadow: 0 4px 20px -8px rgb(0 0 0 / 0.5);
+  border: 1px solid rgba(240, 163, 94, 0.25);
+}
+
+.app-footer-mark {
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 228, 0.55);
+  pointer-events: none;
+}
+
+/* ============================================
+   Night ticket landing (first-visit)
+   ============================================ */
+
+.night-ticket-landing {
+  --night-dusk: #1e3a3a;
+  --night-amber: #f0a35e;
+  --night-cream: #f7f0e4;
+  --night-deep: #0f1f1f;
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  color: var(--night-cream);
+  font-family: 'Figtree', var(--font-body);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(240, 163, 94, 0.35), transparent 55%),
+    linear-gradient(180deg, #2a5550 0%, var(--night-dusk) 45%, var(--night-deep) 100%);
+}
+
+.night-ticket-landing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+.night-ticket-landing__backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.night-ticket-landing__couple {
+  position: relative;
+  opacity: 0.25;
+  transform: scale(1.25);
+}
+
+@media (min-width: 640px) {
+  .night-ticket-landing__couple {
+    transform: scale(1.5);
+  }
+}
+
+.night-ticket-landing__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 20%, var(--night-dusk) 55%, var(--night-deep) 78%);
+}
+
+.night-ticket-landing__content {
+  position: relative;
+  z-index: 2;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 1.25rem 4rem;
+}
+
+@media (min-width: 640px) {
+  .night-ticket-landing__content {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.night-ticket {
+  width: 100%;
+  max-width: 28rem;
+  overflow: hidden;
+  background: var(--night-cream);
+  color: var(--night-deep);
+  border-radius: 4px;
+  position: relative;
+  box-shadow:
+    0 24px 60px -20px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(240, 163, 94, 0.25);
+}
+
+.night-ticket::before,
+.night-ticket::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: var(--night-dusk);
+  border-radius: 50%;
+  top: 58%;
+  z-index: 2;
+}
+
+.night-ticket::before {
+  left: -11px;
+}
+
+.night-ticket::after {
+  right: -11px;
+}
+
+.night-ticket__body {
+  padding: 1.75rem 1.75rem 1.25rem;
+}
+
+.night-ticket__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.night-ticket__stub {
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--night-amber);
+  margin: 0;
+}
+
+.night-ticket__code {
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.5);
+  margin: 0;
+}
+
+.night-ticket__brand {
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--night-deep);
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  line-height: 1;
+  margin: 1.25rem 0 0;
+  text-transform: uppercase;
+}
+
+.night-ticket__greeting {
+  margin: 1.25rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--night-deep);
+  font-family: 'Figtree', system-ui, sans-serif;
+  text-transform: none;
+}
+
+.night-ticket__support {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: rgba(15, 31, 31, 0.75);
+  font-family: 'Figtree', system-ui, sans-serif;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.night-ticket__perforation {
+  margin: 0 1rem;
+  border-top: 2px dashed rgba(15, 31, 31, 0.22);
+}
+
+.night-ticket__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.75rem;
+}
+
+.night-ticket__meta-label {
+  margin: 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.45);
+}
+
+.night-ticket__meta-value {
+  margin: 0.15rem 0 0;
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: 0.06em;
+  color: var(--night-deep);
+}
+
+.night-ticket__cta {
+  display: block;
+  width: 100%;
+  background: var(--night-deep);
+  color: var(--night-cream);
+  font-family: 'Barlow Condensed', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  min-height: 48px;
+}
+
+.night-ticket__cta:hover {
+  background: var(--night-amber);
+  color: var(--night-deep);
+}
+
+.night-ticket__cta:focus-visible {
+  outline: 2px solid var(--night-amber);
+  outline-offset: 2px;
+}
+
+.night-ticket-landing__footer {
+  margin: 2rem 0 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 228, 0.55);
+}
+
+/* ============================================
+   Quest / celebration — ticket language (not form cards)
+   ============================================ */
+
+.quest-stage {
+  position: relative;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem 5rem;
+}
+
+@media (min-width: 640px) {
+  .quest-stage {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.quest-stage__back {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(247, 240, 228, 0.65);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  min-height: 44px;
+}
+
+.quest-stage__back:hover {
+  color: var(--color-night-amber);
+}
+
+/* Punch-hole progress — Eve · 001 style */
+.ticket-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-bottom: 1.25rem;
+}
+
+.ticket-progress__hole {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 2px solid rgba(247, 240, 228, 0.35);
+  background: transparent;
+  color: rgba(247, 240, 228, 0.55);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  padding: 0;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.ticket-progress__hole:hover:not(:disabled) {
+  border-color: var(--color-night-amber);
+  color: var(--color-night-amber);
+}
+
+.ticket-progress__hole[aria-current='step'] {
+  background: var(--color-night-amber);
+  border-color: var(--color-night-amber);
+  color: var(--color-night-deep);
+  transform: scale(1.08);
+}
+
+.ticket-progress__hole.is-punched {
+  background: var(--color-night-cream);
+  border-color: var(--color-night-cream);
+  color: var(--color-night-deep);
+}
+
+.ticket-progress__hole:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ticket-progress__hole:focus-visible {
+  outline: 2px solid var(--color-night-amber);
+  outline-offset: 3px;
+}
+
+/* Question as a night ticket */
+.quest-ticket {
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-night-cream);
+  color: var(--color-night-deep);
+  border-radius: 4px;
+  position: relative;
+  box-shadow:
+    0 24px 60px -20px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(240, 163, 94, 0.25);
+}
+
+.quest-ticket::before,
+.quest-ticket::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--color-night-dusk);
+  border-radius: 50%;
+  top: auto;
+  bottom: 3.35rem;
+  z-index: 2;
+}
+
+.quest-ticket::before {
+  left: -9px;
+}
+
+.quest-ticket::after {
+  right: -9px;
+}
+
+.quest-ticket__head {
+  padding: 1.5rem 1.5rem 0;
+}
+
+.quest-ticket__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.quest-ticket__stub {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-night-amber);
+}
+
+.quest-ticket__code {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.45);
+}
+
+.quest-ticket__prompt {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.85rem, 6vw, 2.35rem);
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-night-deep);
+}
+
+.quest-ticket__hint {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-body);
+  font-size: 1.1875rem;
+  line-height: 1.55;
+  color: rgba(15, 31, 31, 0.68);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.quest-ticket__body {
+  padding: 0 1.35rem;
+}
+
+.quest-ticket__perforation {
+  margin: 1.25rem 1.15rem;
+  border-top: 2px dashed rgba(15, 31, 31, 0.22);
+}
+
+.quest-ticket__tear {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  min-height: 52px;
+}
+
+.quest-ticket__tear-back {
+  flex: 0 0 auto;
+  padding: 0 1.1rem;
+  border: none;
+  background: transparent;
+  color: rgba(15, 31, 31, 0.55);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-right: 1px dashed rgba(15, 31, 31, 0.18);
+}
+
+.quest-ticket__tear-back:hover {
+  color: var(--color-night-deep);
+}
+
+.quest-ticket__tear-next {
+  flex: 1 1 auto;
+  border: none;
+  background: var(--color-night-amber);
+  color: var(--color-night-deep);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.quest-ticket__tear-next:hover:not(:disabled) {
+  background: var(--color-night-mid);
+  color: var(--color-night-cream);
+}
+
+.quest-ticket__tear-next:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quest-ticket__helper {
+  margin: 0.85rem 0 0;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: rgba(247, 240, 228, 0.65);
+}
+
+/* Choice = mini admit stubs (not nested cards) */
+.ticket-stub-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .ticket-stub-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.ticket-stub {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 1.05rem 1.1rem 1.1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid rgba(15, 31, 31, 0.12);
+  border-radius: 2px;
+  color: var(--color-night-deep);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+  min-height: 44px;
+}
+
+.ticket-stub::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgba(15, 31, 31, 0.12);
+}
+
+.ticket-stub:hover {
+  border-color: rgba(240, 163, 94, 0.55);
+}
+
+.ticket-stub.selected {
+  background: #fff8ee;
+  border-color: var(--color-night-amber);
+  box-shadow: inset 0 0 0 1px rgba(240, 163, 94, 0.35);
+}
+
+.ticket-stub.selected::before {
+  background: var(--color-night-amber);
+}
+
+.ticket-stub:focus-visible {
+  outline: 2px solid var(--color-night-amber);
+  outline-offset: 2px;
+}
+
+.ticket-stub__code {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-night-amber);
+  margin-bottom: 0.4rem;
+}
+
+.ticket-stub__label {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--color-night-deep);
+}
+
+.ticket-stub__desc {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: rgba(15, 31, 31, 0.65);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.ticket-stub.selected .ticket-stub__code::after {
+  content: ' · Valid';
+}
+
+/* Stamps for secondary / cuisine */
+.ticket-stamp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-start;
+}
+
+.ticket-stamp {
+  appearance: none;
+  border: 1.5px dashed rgba(15, 31, 31, 0.28);
+  background: transparent;
+  color: var(--color-night-deep);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.7rem 1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.ticket-stamp:hover {
+  border-color: var(--color-night-amber);
+  color: var(--color-night-deep);
+}
+
+.ticket-stamp.selected {
+  border-style: solid;
+  border-color: var(--color-night-deep);
+  background: var(--color-night-amber);
+  color: var(--color-night-deep);
+}
+
+.ticket-stamp:focus-visible {
+  outline: 2px solid var(--color-night-amber);
+  outline-offset: 2px;
+}
+
+.ticket-stamp:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ticket-section-label {
+  margin: 0 0 0.65rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.45);
+}
+
+.ticket-field {
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid rgba(15, 31, 31, 0.18);
+  background: transparent;
+  border-radius: 0;
+  padding: 0.7rem 0;
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  color: var(--color-night-deep);
+}
+
+.ticket-field:focus {
+  outline: none;
+  border-bottom-color: var(--color-night-amber);
+}
+
+.ticket-field::placeholder {
+  color: rgba(15, 31, 31, 0.35);
+}
+
+.ticket-note {
+  margin: 0.55rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: rgba(15, 31, 31, 0.55);
+}
+
+.ticket-followup {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px dashed rgba(15, 31, 31, 0.18);
+}
+
+/* Celebration as boarding ticket */
+.celeb-ticket {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--color-night-cream);
+  color: var(--color-night-deep);
+  border-radius: 4px;
+  position: relative;
+  text-align: left;
+  box-shadow:
+    0 24px 60px -20px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(240, 163, 94, 0.25);
+}
+
+.celeb-ticket::before,
+.celeb-ticket::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--color-night-dusk);
+  border-radius: 50%;
+  top: 42%;
+  z-index: 2;
+}
+
+.celeb-ticket::before {
+  left: -9px;
+}
+
+.celeb-ticket::after {
+  right: -9px;
+}
+
+/* Celebration reveal — keepsake-first (shipped) */
+
+.celeb-reveal {
+  --reveal-ink: #f7f0e4;
+  --reveal-muted: rgba(247, 240, 228, 0.68);
+  --reveal-amber: #f0a35e;
+}
+
+.celeb-reveal__eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--reveal-amber);
+  margin-bottom: 0.5rem;
+}
+
+.celeb-reveal__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.85rem, 6vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--reveal-ink);
+}
+
+.celeb-reveal__date {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--reveal-ink);
+}
+
+.celeb-reveal__verse {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1.25rem;
+}
+
+.celeb-reveal__verse-line {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: clamp(1.05rem, 3.5vw, 1.25rem);
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: var(--reveal-ink);
+  text-wrap: balance;
+  max-width: 18rem;
+}
+
+.celeb-reveal__verse-line--accent {
+  color: var(--reveal-amber);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.celeb-reveal__verse-line--soft {
+  font-size: 0.92rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--reveal-muted);
+}
+
+.celeb-reveal__verse-mark {
+  font-size: 0.55rem;
+  color: rgba(240, 163, 94, 0.55);
+  line-height: 1;
+  margin: 0.15rem 0;
+}
+
+.celeb-reveal__back {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--reveal-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.celeb-reveal__back:hover {
+  color: var(--reveal-amber);
+}
+
+.celeb-reveal__body-card {
+  background: var(--reveal-ink);
+  color: #0f1f1f;
+  border-radius: 4px;
+  box-shadow:
+    0 18px 40px rgba(15, 31, 31, 0.35),
+    0 0 0 1px rgba(240, 163, 94, 0.18);
+  padding: 1.35rem 1.35rem 1.15rem;
+}
+
+.celeb-reveal__body-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f1f1f;
+  margin-bottom: 0.35rem;
+}
+
+.celeb-reveal__body-lede {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: rgba(15, 31, 31, 0.45);
+  margin-bottom: 1rem;
+}
+
+.celeb-reveal__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.celeb-reveal__steps li {
+  border-top: 1px solid rgba(15, 31, 31, 0.1);
+}
+
+.celeb-reveal__steps li:last-child {
+  border-bottom: 1px solid rgba(15, 31, 31, 0.1);
+}
+
+.celeb-reveal__step-btn {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.85rem 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.celeb-reveal__step-btn:hover {
+  background: rgba(240, 163, 94, 0.08);
+}
+
+.celeb-reveal__step-btn:focus-visible {
+  outline: 2px solid var(--reveal-amber);
+  outline-offset: 2px;
+}
+
+.celeb-reveal__step-mark {
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.45rem;
+  border-radius: 9999px;
+  background: var(--reveal-amber);
+  box-shadow: 0 0 0 3px rgba(240, 163, 94, 0.22);
+}
+
+.celeb-reveal__step-index {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(15, 31, 31, 0.55);
+  margin-bottom: 0.25rem;
+}
+
+.celeb-reveal__step-edit {
+  letter-spacing: 0.12em;
+  color: var(--reveal-amber);
+  opacity: 0.85;
+}
+
+.celeb-reveal__step-btn:hover .celeb-reveal__step-edit {
+  opacity: 1;
+}
+
+.celeb-reveal__step-copy {
+  display: block;
+  min-width: 0;
+}
+
+.celeb-reveal__step-choice {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #0f1f1f;
+  margin-bottom: 0.15rem;
+}
+
+.celeb-reveal__step-plan {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(15, 31, 31, 0.72);
+}
+
+.celeb-reveal__love-card {
+  border: 1px solid rgba(247, 240, 228, 0.14);
+  border-radius: 4px;
+  background: #f7f0e4;
+  color: #0f1f1f;
+  padding: 1.25rem 1.35rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
 }

@@ -1,7 +1,7 @@
 /**
  * THE PERSONAL CONSTELLATION MAP
  *
- * Turns Jennifer's six answers into a unique, beautiful star map —
+ * Turns Jennifer's answers into a unique, beautiful star map —
  * "the map of the night we chose."
  *
  * Everything here is pure and DETERMINISTIC: the exact same set of answers
@@ -14,14 +14,14 @@
  */
 
 import type { QuestAnswers, LockedPlan } from './types';
-import { getFoodCategoryLabel, getVibeCategoryLabel, getFeelingWordLabel, formatRestaurantDetail } from './questions';
+import { getFoodCategoryLabel, getVibeCategoryLabel, formatRestaurantDetail, formatOutingDetail, isOutingStepVibe } from './questions';
 
 export interface ConstellationStar {
   x: number;
   y: number;
   /** outer radius of the star glyph */
   r: number;
-  /** soft label shown under the star (us, vibe, date, feeling, …) */
+  /** soft label shown under the star (us, vibe, date, …) */
   label: string;
   color: string;
   /** the brightest hero star (the chosen date) gets an extra glow */
@@ -45,7 +45,7 @@ export interface ConstellationData {
   accent: string;
 }
 
-const PALETTE = ['#FF2D95', '#00D4FF', '#FFE600', '#9D4EDD'];
+const PALETTE = ['#f0a35e', '#f7f0e4', '#2a5550', '#c4a574'];
 
 /** Tiny, stable string hash → 32-bit seed. */
 function hashString(str: string): number {
@@ -69,7 +69,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** Short, friendly labels for each of the six stars. */
+/** Short, friendly labels for each of the five stars. */
 function starLabels(a: Partial<QuestAnswers>): string[] {
   const date = a.chosenDate ? new Date(a.chosenDate + 'T00:00:00') : null;
   const dateLabel = date
@@ -77,7 +77,9 @@ function starLabels(a: Partial<QuestAnswers>): string[] {
     : 'Our night';
 
   const food =
-    a.foodFantasy === 'restaurant' && formatRestaurantDetail(a)
+    isOutingStepVibe(a.vibe) && formatOutingDetail(a)
+      ? formatOutingDetail(a)!
+      : a.foodFantasy === 'restaurant' && formatRestaurantDetail(a)
       ? formatRestaurantDetail(a)!
       : a.foodFantasy
         ? getFoodCategoryLabel(a.foodFantasy)
@@ -88,23 +90,21 @@ function starLabels(a: Partial<QuestAnswers>): string[] {
     a.vibe ? getVibeCategoryLabel(a.vibe) : 'Vibe',
     food,
     dateLabel,
-    a.feelingWord ? getFeelingWordLabel(a.feelingWord) : 'Feeling',
     a.secretHint && a.secretHint.trim() ? 'Your wish' : 'Just us',
   ];
 }
 
 /**
- * Six anchor points laid out as a gentle left-to-right wave so the
+ * Five anchor points laid out as a gentle left-to-right wave so the
  * connecting line always reads as a real constellation (never a messy scatter).
  * Normalized 0–1; the date (index 3) is the hero.
  */
 const ANCHORS: Array<[number, number]> = [
-  [0.12, 0.58],
-  [0.28, 0.34],
-  [0.42, 0.52],
-  [0.58, 0.28], // hero — the chosen date
-  [0.74, 0.46],
-  [0.89, 0.56],
+  [0.14, 0.56],
+  [0.32, 0.34],
+  [0.48, 0.52],
+  [0.64, 0.28], // hero — the chosen date
+  [0.86, 0.50],
 ];
 
 const HERO_INDEX = 3;
@@ -132,12 +132,11 @@ export function buildConstellation(
     plan.vibe,
     plan.foodFantasy,
     plan.chosenDate,
-    plan.feelingWord,
     (plan.secretHint || '').trim(),
   ].join('|');
   const rng = mulberry32(hashString(seedSource || 'our-little-universe'));
 
-  const accent = '#FF2D95';
+  const accent = '#f0a35e';
   const labels = starLabels(plan);
 
   const marginX = width * 0.08;
@@ -205,7 +204,7 @@ export function drawConstellationToCanvas(
   // Background twinkle dust
   for (const d of data.dust) {
     ctx.beginPath();
-    ctx.fillStyle = '#9D4EDD';
+    ctx.fillStyle = '#2a5550';
     ctx.globalAlpha = d.o * 0.7;
     ctx.arc(ox + d.x, oy + d.y, d.r, 0, Math.PI * 2);
     ctx.fill();
@@ -256,9 +255,9 @@ export function drawConstellationToCanvas(
     ctx.globalAlpha = 1;
 
     if (showLabels && s.label) {
-      ctx.fillStyle = s.hero ? '#0F172A' : '#1E2937';
+      ctx.fillStyle = s.hero ? '#0f1f1f' : '#1a2e2e';
       ctx.globalAlpha = s.hero ? 0.92 : 0.66;
-      ctx.font = `${s.hero ? 700 : 500} ${s.hero ? 13 : 11}px Poppins, system-ui, sans-serif`;
+      ctx.font = `${s.hero ? 700 : 500} ${s.hero ? 13 : 11}px Figtree, system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(s.label, ox + s.x, oy + s.y + s.r + 14);
       ctx.globalAlpha = 1;

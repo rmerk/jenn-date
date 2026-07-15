@@ -5,18 +5,21 @@ import { Toaster, toast } from 'sonner';
 
 import { CoupleCartoon } from './components/CoupleCartoon';
 import type { QuestAnswers, LockedPlan } from './lib/types';
-import { TOTAL_QUESTIONS, getQuestion, isQuestComplete, canJumpToStep, getFoodVibeHint, getVibeCategoryLabel, getFoodCategoryLabel, getFeelingWordLabel, RESTAURANT_CUISINE_OPTIONS, isRestaurantFollowUpComplete, formatRestaurantDetail } from './lib/questions';
+import { TOTAL_QUESTIONS, getQuestion, isQuestComplete, canJumpToStep, getVibeCategoryLabel, RESTAURANT_CUISINE_OPTIONS, OUTING_ACTIVITY_OPTIONS, isStep2Complete, formatFoodAnswer, formatOutingAnswer, deriveFoodFantasy, deriveOutingFoodFantasy, getStep2Copy, isOutingStepVibe } from './lib/questions';
 import { ProgressStars } from './components/ProgressStars';
 import { QuestionCard } from './components/QuestionCard';
 import { DateSelector } from './components/DateSelector';
 import { ConstellationMap } from './components/ConstellationMap';
 import { drawConstellationToCanvas } from './lib/constellation';
-import { generateSummary, getConstellationIdeas, isFutureDate, isDatePassed, isChosenDateToday, formatLockedDate, formatDateForDisplay, generateLoveBriefMarkdown, generateLoveBriefICS, downloadTextFile, downloadCalendarICS } from './lib/utils';
-import { getPersonalizedLoveMessage, getShortSweetNote } from './lib/loveMessage';
+import { generateLoveBriefMarkdown, generateLoveBriefICS, downloadTextFile, downloadCalendarICS, isFutureDate, isDatePassed, isChosenDateToday, formatLockedDate, formatDateForDisplay, DEFAULT_CHOSEN_TIME } from './lib/utils';
+import { getShortSweetNote } from './lib/loveMessage';
 import { getWhisperForPlan, CLOSE_PHRASES } from './lib/whisperPrompts';
 import { getAnticipationForPlan } from './lib/anticipationPrompts';
 import { loadLockedPlan, saveLockedPlan, clearLockedPlan, archiveCurrentPlan } from './lib/planStorage';
 import { loadQuestProgress, saveQuestProgress, clearQuestProgress } from './lib/questProgress';
+import { NightTicketLanding } from './components/NightTicketLanding';
+import { CelebrationReveal } from './components/CelebrationReveal';
+import { isQuietLetterAlternate, QuietLetterAlternate } from './prototype/reimagine/QuietLetterAlternate';
 
 /**
  * Jennifer's UNIVERSTAR Date Quest — Vertical Slice
@@ -25,7 +28,7 @@ import { loadQuestProgress, saveQuestProgress, clearQuestProgress } from './lib/
  *
  * This version delivers the full emotional arc for early feedback:
  * - Beautiful landing (first visit + locked return)
- * - Five-question quest + full gorgeous DateSelector
+ * - Four-question quest + full gorgeous DateSelector
  * - Triumphant Celebration with lock, confetti, persistence, and the real love message
  * - Return visits always show the happy locked state
  */
@@ -45,8 +48,10 @@ const DEFAULT_ANSWERS: Partial<QuestAnswers> = {
   foodFantasy: undefined,
   restaurantCuisine: undefined,
   restaurantNote: '',
+  outingActivity: undefined,
+  outingNote: '',
   chosenDate: undefined,
-  feelingWord: undefined,
+  chosenTime: DEFAULT_CHOSEN_TIME,
   secretHint: '',
 };
 
@@ -101,6 +106,11 @@ export default function App() {
   const [currentWhisper, setCurrentWhisper] = useState('');
   const [debriefHighlight, setDebriefHighlight] = useState(() => loadLockedPlan()?.debriefHighlight ?? '');
   const [anticipationLine, setAnticipationLine] = useState('');
+  const [showLockedMore, setShowLockedMore] = useState(false);
+  const [showCelebrationMore, setShowCelebrationMore] = useState(false);
+  const whisperOpenerRef = useRef<HTMLButtonElement>(null);
+  const whisperCloseRef = useRef<HTMLButtonElement>(null);
+  const whisperTitleId = 'whisper-dialog-title';
 
   // Persist quest progress (answers + step) so reload picks up where she left off
   useEffect(() => {
@@ -116,6 +126,7 @@ export default function App() {
 
   useEffect(() => {
     setDebriefHighlight(lockedPlan?.debriefHighlight ?? '');
+    setShowLockedMore(false);
   }, [lockedPlan?.chosenDate, lockedPlan?.debriefHighlight]);
 
   useEffect(() => {
@@ -137,7 +148,7 @@ export default function App() {
     } else if (isQuestComplete(answers)) {
       setState((s) => ({ ...s, mode: 'celebration', showLoveMessage: false }));
     } else {
-      toast.error('Almost there — answer the highlighted questions so we can show your summary.');
+      toast.error('Almost there — answer the highlighted questions so I can finish the plan.');
     }
   };
 
@@ -170,21 +181,92 @@ export default function App() {
 
   // ==================== ANSWER UPDATES ====================
   const updateAnswer = <K extends keyof QuestAnswers>(key: K, value: QuestAnswers[K]) => {
-    setState((s) => ({
-      ...s,
-      answers: { ...s.answers, [key]: value },
-    }));
+    setState((s) => {
+      if (key !== 'vibe') {
+        return {
+          ...s,
+          answers: { ...s.answers, [key]: value },
+        };
+      }
+
+      const nextVibe = value as QuestAnswers['vibe'];
+      const switchingToOuting = isOutingStepVibe(nextVibe);
+      return {
+        ...s,
+        answers: {
+          ...s.answers,
+          vibe: nextVibe,
+          // Clear the other step-2 track when vibe flips food ↔ outing
+          ...(switchingToOuting
+            ? {
+                restaurantCuisine: undefined,
+                restaurantNote: '',
+                foodFantasy: deriveOutingFoodFantasy(
+                  s.answers.outingActivity,
+                  s.answers.outingNote,
+                ),
+              }
+            : {
+                outingActivity: undefined,
+                outingNote: '',
+                foodFantasy: deriveFoodFantasy(
+                  s.answers.restaurantCuisine,
+                  s.answers.restaurantNote,
+                ),
+              }),
+        },
+      };
+    });
   };
 
-  const selectFoodFantasy = (value: QuestAnswers['foodFantasy']) => {
+  const selectCuisine = (value: string) => {
+    setState((s) => {
+      const restaurantCuisine =
+        s.answers.restaurantCuisine === value ? undefined : value;
+      return {
+        ...s,
+        answers: {
+          ...s.answers,
+          restaurantCuisine,
+          foodFantasy: deriveFoodFantasy(restaurantCuisine, s.answers.restaurantNote),
+        },
+      };
+    });
+  };
+
+  const updateRestaurantNote = (restaurantNote: string) => {
     setState((s) => ({
       ...s,
       answers: {
         ...s.answers,
-        foodFantasy: value,
-        ...(value === 'restaurant'
-          ? {}
-          : { restaurantCuisine: undefined, restaurantNote: '' }),
+        restaurantNote,
+        foodFantasy: deriveFoodFantasy(s.answers.restaurantCuisine, restaurantNote),
+      },
+    }));
+  };
+
+  const selectOuting = (value: string) => {
+    setState((s) => {
+      const outingActivity =
+        s.answers.outingActivity === value ? undefined : value;
+      return {
+        ...s,
+        answers: {
+          ...s.answers,
+          outingActivity,
+          foodFantasy: deriveOutingFoodFantasy(outingActivity, s.answers.outingNote),
+        },
+      };
+    });
+  };
+
+  const updateOutingNote = (outingNote: string) => {
+    setState((s) => ({
+      ...s,
+      answers: {
+        ...s.answers,
+        outingNote,
+        foodFantasy: deriveOutingFoodFantasy(s.answers.outingActivity, outingNote),
       },
     }));
   };
@@ -193,19 +275,31 @@ export default function App() {
     const q = getQuestion(currentStep);
     if (q.key === 'secretHint') return true; // optional
     if (currentStep === 2) {
-      if (!answers.foodFantasy) return false;
-      if (answers.foodFantasy === 'restaurant') {
-        return isRestaurantFollowUpComplete(answers);
-      }
-      return true;
+      return isStep2Complete(answers);
+    }
+    if (currentStep === 3) {
+      return Boolean(answers.chosenDate) && Boolean(answers.chosenTime);
     }
     return Boolean(answers[q.key as keyof QuestAnswers]);
+  };
+
+  const proceedHelper = (): string | null => {
+    if (canProceed()) return null;
+    if (currentStep === 2) {
+      return isOutingStepVibe(answers.vibe)
+        ? 'Pick an activity or type a plan to continue'
+        : 'Pick a cuisine or type a craving to continue';
+    }
+    if (currentStep === 3) {
+      return 'Pick a date and time to continue';
+    }
+    return 'Pick an option to continue';
   };
 
   // ==================== THE BIG MOMENT — LOCK THE DATE ====================
   const lockDateInHeart = () => {
     // Final validation
-    const required: (keyof QuestAnswers)[] = ['vibe', 'foodFantasy', 'chosenDate', 'feelingWord'];
+    const required: (keyof QuestAnswers)[] = ['vibe', 'foodFantasy', 'chosenDate', 'chosenTime'];
     const missing = required.filter((k) => !answers[k]);
     if (missing.length > 0) {
       toast.error("Almost there — please answer the highlighted questions so we can lock this properly.");
@@ -215,8 +309,12 @@ export default function App() {
       toast.error("Please choose a future date for our evening.");
       return;
     }
-    if (answers.foodFantasy === 'restaurant' && !isRestaurantFollowUpComplete(answers)) {
-      toast.error("Almost there — pick a cuisine style or type a spot before we continue.");
+    if (!isStep2Complete(answers)) {
+      toast.error(
+        isOutingStepVibe(answers.vibe)
+          ? 'Almost there — pick an activity or type a plan before we continue.'
+          : 'Almost there — pick a cuisine or type a craving before we continue.',
+      );
       return;
     }
 
@@ -229,7 +327,7 @@ export default function App() {
     saveLockedPlan(fullPlan);
 
     // SPECTACULAR BUT TASTEFUL CONFETTI — exact brand colors + hearts/stars
-    const colors = ['#FF2D95', '#00D4FF', '#FFE600', '#9D4EDD'];
+    const colors = ['#f0a35e', '#f7f0e4', '#2a5550', '#1e3a3a'];
     confetti({
       particleCount: 180,
       spread: 80,
@@ -259,6 +357,7 @@ export default function App() {
 
     // Reveal the real message + switch to locked celebration view
     setDebriefHighlight('');
+    setShowCelebrationMore(false);
     setState((s) => ({
       ...s,
       lockedPlan: fullPlan,
@@ -282,6 +381,20 @@ export default function App() {
       showLoveMessage: false,
     });
     clearLockedPlan();
+  };
+
+  /** From celebration: jump to a specific quest step to change that answer. */
+  const editStep = (step: number) => {
+    const base = lockedPlan || answers;
+    if (lockedPlan) clearLockedPlan();
+    setShowCelebrationMore(false);
+    setState({
+      mode: 'quest',
+      currentStep: Math.max(1, Math.min(TOTAL_QUESTIONS, step)),
+      answers: { ...DEFAULT_ANSWERS, ...base },
+      lockedPlan: null,
+      showLoveMessage: false,
+    });
   };
 
   const clearEverything = () => {
@@ -320,52 +433,60 @@ export default function App() {
     const ctx = canvas.getContext('2d', { alpha: true })!;
     ctx.scale(dpr, dpr);
 
-    // Creamy background with soft vignette
+    // Dusk ticket background
     const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#FFF8F0');
-    grad.addColorStop(1, '#F0F9FF');
+    grad.addColorStop(0, '#2a5550');
+    grad.addColorStop(0.45, '#1e3a3a');
+    grad.addColorStop(1, '#0f1f1f');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Rounded sticker border + inner highlight
-    ctx.strokeStyle = '#E2E8F0';
-    ctx.lineWidth = 18;
+    // Cream ticket panel
+    ctx.fillStyle = '#f7f0e4';
     ctx.beginPath();
-    ctx.roundRect(30, 30, w - 60, h - 60, 48);
-    ctx.stroke();
+    ctx.roundRect(40, 40, w - 80, h - 80, 4);
+    ctx.fill();
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(240,163,94,0.35)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(44, 44, w - 88, h - 88, 36);
+    ctx.roundRect(40, 40, w - 80, h - 80, 4);
     ctx.stroke();
 
     // Title
-    ctx.fillStyle = '#9D4EDD';
-    ctx.font = '600 22px Poppins, system-ui, sans-serif';
+    ctx.fillStyle = '#f0a35e';
+    ctx.font = '600 20px "Barlow Condensed", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('THE MAP OF THE NIGHT WE CHOSE', w / 2, 96);
 
     // Big date
-    ctx.fillStyle = '#0F172A';
-    ctx.font = '700 36px Poppins, system-ui, sans-serif';
-    ctx.fillText(formatLockedDate(lockedPlan.chosenDate), w / 2, 146);
+    ctx.fillStyle = '#0f1f1f';
+    ctx.font = '700 36px "Barlow Condensed", system-ui, sans-serif';
+    ctx.fillText(formatLockedDate(lockedPlan.chosenDate, lockedPlan.chosenTime), w / 2, 146);
 
     // Her constellation — same seed and sky as the on-screen map
     drawConstellationToCanvas(ctx, lockedPlan, 110, 176, w - 220, 296);
 
-    // Feeling line
-    ctx.fillStyle = '#1E2937';
-    ctx.font = '500 20px Inter, system-ui, sans-serif';
-    ctx.fillText(`You want to feel ${lockedPlan.feelingWord} — and you will.`, w / 2, 520);
+    // Vibe + food line
+    ctx.fillStyle = '#0f1f1f';
+    ctx.font = '500 20px Figtree, system-ui, sans-serif';
+    ctx.fillText(
+      `${getVibeCategoryLabel(lockedPlan.vibe)} · ${
+        isOutingStepVibe(lockedPlan.vibe)
+          ? formatOutingAnswer(lockedPlan)
+          : formatFoodAnswer(lockedPlan)
+      }`,
+      w / 2,
+      520,
+    );
 
     // Bottom love line
-    ctx.fillStyle = '#FF2D95';
-    ctx.font = '600 17px Poppins, system-ui, sans-serif';
-    ctx.fillText('Locked in — our night', w / 2, 560);
+    ctx.fillStyle = '#f0a35e';
+    ctx.font = '700 18px "Barlow Condensed", system-ui, sans-serif';
+    ctx.fillText('LOCKED IN — OUR NIGHT', w / 2, 560);
 
     // Decorative stars
-    ctx.fillStyle = '#FFE600';
+    ctx.fillStyle = '#f0a35e';
     ctx.font = '26px system-ui';
     ctx.fillText('✧', 110, 120);
     ctx.fillText('✧', w - 120, 120);
@@ -389,15 +510,30 @@ export default function App() {
     setShowWhisper(true);
   };
 
-  // Simple keyboard escape for the whisper modal (focus management is minimal but sufficient)
+  const closeWhisper = () => {
+    setShowWhisper(false);
+    requestAnimationFrame(() => {
+      whisperOpenerRef.current?.focus();
+    });
+  };
+
+  // Simple keyboard escape for the whisper modal
   useEffect(() => {
+    if (!showWhisper) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showWhisper) {
+      if (e.key === 'Escape') {
         setShowWhisper(false);
+        requestAnimationFrame(() => whisperOpenerRef.current?.focus());
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, [showWhisper]);
+
+  useEffect(() => {
+    if (showWhisper) {
+      whisperCloseRef.current?.focus();
+    }
   }, [showWhisper]);
 
   // ==================== FEATURE 2: LOVE BRIEF (husband-only, invisible to Jennifer) ====================
@@ -481,7 +617,7 @@ export default function App() {
 
   const planAnother = () => {
     if (!lockedPlan) return;
-    if (!confirm('Start planning the next date? This one moves to your history.')) return;
+    if (!confirm('Start planning our next date? This one moves to your history.')) return;
     archiveCurrentPlan(lockedPlan);
     clearLockedPlan();
     clearQuestProgress();
@@ -493,7 +629,7 @@ export default function App() {
       lockedPlan: null,
       showLoveMessage: false,
     });
-    toast('Your last date is saved. Pick the next one.');
+    toast('Your last date is saved. Tell me what you want for the next one.');
   };
 
   const addToCalendar = () => {
@@ -518,24 +654,56 @@ export default function App() {
 
   // ==================== RENDER ====================
   const currentQuestion = getQuestion(currentStep);
+  const step2Copy = currentStep === 2 ? getStep2Copy(answers.vibe) : null;
+  const questPrompt = step2Copy?.prompt ?? currentQuestion.prompt;
+  const questHint = step2Copy?.hint ?? currentQuestion.hint;
   const questComplete = isQuestComplete(answers);
+  const nextHelper = proceedHelper();
+  const isFirstVisitLanding = mode === 'landing' && !lockedPlan;
+
+  // Reserved alternate: ?variant=B shows Quiet Letter (not shipped)
+  const variantParam =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('variant')
+      : null;
+  const showQuietLetterAlternate =
+    import.meta.env.DEV &&
+    isQuietLetterAlternate(variantParam) &&
+    isFirstVisitLanding;
+
+  const startFromAlternate = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('variant');
+    window.history.replaceState({}, '', url.toString());
+    startQuest();
+  };
+
+  if (showQuietLetterAlternate) {
+    return (
+      <>
+        <Toaster position="top-center" richColors closeButton />
+        <QuietLetterAlternate onStart={startFromAlternate} />
+      </>
+    );
+  }
 
   return (
-    <div className="min-h-screen pb-20 text-deep-navy">
+    <div className={`min-h-screen text-night-cream ${isFirstVisitLanding ? '' : 'pb-20'}`}>
       <Toaster position="top-center" richColors closeButton />
 
-      {/* Gentle top navigation hint */}
+      {/* Universe badge — hidden on night-ticket landing (brand lives on the ticket) */}
+      {!isFirstVisitLanding && (
       <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-3 pointer-events-none">
         <div
           ref={badgeRef}
-          className="pointer-events-auto rounded-full bg-white/70 backdrop-blur px-4 py-1 text-xs tracking-widest text-deep-navy/60 shadow-sm"
+          className="universe-badge pointer-events-auto"
         >
           OUR LITTLE UNIVERSE
           {/* Dev-only escape hatch — completely invisible in normal use and in the final artifact for Jennifer */}
           {isHusbandDev && lockedPlan && (
             <button
               onClick={devTriggerBrief}
-              className="ml-2 text-[10px] text-romantic-pink/70 hover:text-romantic-pink underline"
+              className="ml-2 text-[10px] text-night-amber/80 hover:text-night-amber underline"
               title="Dev: trigger Love Brief without long-press"
             >
               💌
@@ -543,18 +711,18 @@ export default function App() {
           )}
         </div>
       </div>
+      )}
 
       {/* ==================== LANDING ==================== */}
-      {mode === 'landing' && (
+      {mode === 'landing' && lockedPlan && (
         <div className="pt-16 sm:pt-20 px-6 max-w-3xl mx-auto text-center">
-          {lockedPlan ? (
-            <div className="space-y-8 pt-8">
+            <div className="space-y-6 pt-6">
               <div className="flex justify-center">
-                <CoupleCartoon size={320} />
+                <CoupleCartoon size={200} />
               </div>
 
               <div>
-                <div className="uppercase tracking-[3px] text-xs text-romantic-pink mb-2">
+                <div className="uppercase tracking-[3px] text-xs text-night-amber mb-2">
                   {isDatePassed(lockedPlan.chosenDate)
                     ? 'THAT NIGHT'
                     : isChosenDateToday(lockedPlan.chosenDate)
@@ -562,58 +730,48 @@ export default function App() {
                       : 'COMING UP'}
                 </div>
                 <h1 className="text-4xl sm:text-5xl leading-none">
-                  {isDatePassed(lockedPlan.chosenDate) ? 'We Did It' : 'Our Date Is Set'}
+                  {isDatePassed(lockedPlan.chosenDate) ? 'We Did It' : 'I Planned Our Night'}
                 </h1>
-                <p className="mt-4 text-xl text-deep-purple/90">
+                <p className="mt-3 text-xl text-night-cream/80">
                   {isDatePassed(lockedPlan.chosenDate)
-                    ? formatLockedDate(lockedPlan.chosenDate)
+                    ? formatLockedDate(lockedPlan.chosenDate, lockedPlan.chosenTime)
                     : isChosenDateToday(lockedPlan.chosenDate)
                       ? "Tonight's the night."
                       : `${formatDateForDisplay(lockedPlan.chosenDate).daysUntil} day${formatDateForDisplay(lockedPlan.chosenDate).daysUntil === 1 ? '' : 's'} to go.`}
                 </p>
               </div>
 
-              <div className="sticker-card inline-block px-8 py-6 text-left max-w-md">
-                <div className="text-sm text-deep-purple/70 mb-1">THE PLAN</div>
-                <div className="text-3xl font-semibold tracking-tight">{formatLockedDate(lockedPlan.chosenDate)}</div>
-                <div className="mt-4 text-sm leading-relaxed text-charcoal/80 space-y-1">
-                  <div>
-                    Vibe: <span className="font-medium">{getVibeCategoryLabel(lockedPlan.vibe)}</span>.
-                  </div>
-                  <div>
-                    Food: <span className="font-medium">{getFoodCategoryLabel(lockedPlan.foodFantasy)}</span>
-                    {lockedPlan.foodFantasy === 'restaurant' && formatRestaurantDetail(lockedPlan) && (
-                      <>
-                        {' '}
-                        — <span className="font-medium">{formatRestaurantDetail(lockedPlan)}</span>
-                      </>
-                    )}
-                    .
-                  </div>
-                  <div>
-                    You want to feel <span className="font-medium">{getFeelingWordLabel(lockedPlan.feelingWord)}</span>.
-                  </div>
-                </div>
-              </div>
-
-              <div className="max-w-md mx-auto">
-                <div className="sticker-card p-3 sm:p-4">
+              <div className="max-w-lg mx-auto w-full">
+                <div className="sticker-card p-4 sm:p-6 min-h-[220px] sm:min-h-[260px]">
                   <ConstellationMap plan={lockedPlan} />
                 </div>
-                <p className="text-xs text-charcoal/55 mt-2">Your answers, mapped ✧</p>
+                <p className="text-xs text-night-cream/65 mt-2">
+                  {formatLockedDate(lockedPlan.chosenDate, lockedPlan.chosenTime)} · {getVibeCategoryLabel(lockedPlan.vibe)} ·{' '}
+                  {isOutingStepVibe(lockedPlan.vibe)
+                    ? formatOutingAnswer(lockedPlan)
+                    : formatFoodAnswer(lockedPlan)}
+                </p>
               </div>
 
-              {isFutureDate(lockedPlan.chosenDate) && (
-                <div className="max-w-md mx-auto text-left space-y-3">
-                  <div className="text-xs tracking-widest text-romantic-pink uppercase">Before the date</div>
-                  <div className="sticker-card p-5 text-[15px] leading-relaxed text-deep-navy/90">
+              {isFutureDate(lockedPlan.chosenDate) && anticipationLine && (
+                <div className="max-w-md mx-auto space-y-2">
+                  <div className="text-xs tracking-widest text-night-amber uppercase">From me, before the date</div>
+                  <blockquote className="anticipation-quote text-[15px] leading-relaxed text-night-cream/90">
                     {anticipationLine}
-                  </div>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <button onClick={copyAnticipation} className="pill-button secondary text-sm">
-                      Copy this text
+                  </blockquote>
+                  <div className="flex justify-center gap-4 text-sm">
+                    <button
+                      type="button"
+                      onClick={copyAnticipation}
+                      className="underline text-night-cream/65 hover:text-night-amber"
+                    >
+                      Copy
                     </button>
-                    <button onClick={refreshAnticipation} className="text-sm underline text-charcoal/60 hover:text-romantic-pink">
+                    <button
+                      type="button"
+                      onClick={refreshAnticipation}
+                      className="underline text-night-cream/65 hover:text-night-amber"
+                    >
                       Another one
                     </button>
                   </div>
@@ -622,73 +780,65 @@ export default function App() {
 
               {isDatePassed(lockedPlan.chosenDate) && (
                 <div className="max-w-md mx-auto text-left">
-                  <div className="text-xs tracking-widest text-romantic-pink uppercase mb-2">How&apos;d it go?</div>
+                  <div className="text-xs tracking-widest text-night-amber uppercase mb-2">How&apos;d it go?</div>
                   <textarea
                     value={debriefHighlight}
                     onChange={(e) => setDebriefHighlight(e.target.value)}
                     onBlur={() => saveDebrief(debriefHighlight)}
                     placeholder="One line — what was the highlight?"
-                    className="w-full min-h-[68px] rounded-3xl border-2 border-deep-purple/20 bg-white/70 p-4 text-sm focus:outline-none focus:border-romantic-pink placeholder:text-charcoal/40"
+                    className="w-full min-h-[68px] rounded border-2 border-night-deep/15 bg-night-cream p-4 text-sm text-night-deep focus:outline-none focus:border-night-amber placeholder:text-night-deep/40"
                   />
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+              <div className="flex flex-col items-center gap-3 pt-2">
                 {isFutureDate(lockedPlan.chosenDate) && (
-                  <button onClick={addToCalendar} className="pill-button primary">
+                  <button type="button" onClick={addToCalendar} className="pill-button primary">
                     Add to calendar
                   </button>
                 )}
                 {isDatePassed(lockedPlan.chosenDate) && (
-                  <button onClick={planAnother} className="pill-button primary">
-                    Plan another date
+                  <button type="button" onClick={planAnother} className="pill-button primary">
+                    Plan our next date
                   </button>
                 )}
-                <button onClick={tweakPlan} className="pill-button secondary">
-                  Change this plan
+                <button
+                  type="button"
+                  onClick={() => setShowLockedMore((open) => !open)}
+                  aria-expanded={showLockedMore}
+                  className="text-sm text-night-cream/65 hover:text-night-amber underline"
+                >
+                  {showLockedMore ? 'Fewer options' : 'More options'}
                 </button>
-                <button onClick={clearEverything} className="text-sm underline text-charcoal/60 hover:text-romantic-pink">
-                  Clear everything
-                </button>
+                {showLockedMore && (
+                  <div className="flex flex-col items-center gap-2 w-full max-w-xs">
+                    <button type="button" onClick={tweakPlan} className="pill-button secondary text-sm w-full">
+                      Ask me to change something
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearEverything}
+                      className="text-sm text-night-cream/65 hover:text-night-amber underline"
+                    >
+                      Clear everything
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          ) : (
-            /* First Visit — Warm, generous, husband’s voice */
-            <div className="pt-8 space-y-10">
-              <div className="flex justify-center">
-                <CoupleCartoon size={380} interactive />
-              </div>
-
-              <div className="max-w-xl mx-auto space-y-4">
-                <div className="uppercase tracking-[4px] text-xs text-romantic-pink">A SMALL FAVOR</div>
-                <h1 className="text-balance">Hey Jennifer</h1>
-                <p className="text-xl leading-snug text-charcoal/90">
-                  I made something for you. Five quick questions — one of them is picking the night —
-                  and at the end I&apos;ll know what you actually want and we can lock it in.
-                </p>
-                <p className="text-sm text-deep-purple/70 pt-1">Takes about three minutes on your phone.</p>
-              </div>
-
-              <button
-                onClick={startQuest}
-                className="pill-button primary text-lg px-10 py-4 shadow-xl shadow-romantic-pink/30"
-              >
-                Help me plan our evening →
-              </button>
-
-              <div className="text-[10px] tracking-widest text-charcoal/50 pt-2">PICK YOUR NIGHT · TELL ME WHAT YOU WANT</div>
-            </div>
-          )}
         </div>
+      )}
+
+      {mode === 'landing' && !lockedPlan && (
+        <NightTicketLanding onStart={startQuest} />
       )}
 
       {/* ==================== THE QUEST WIZARD ==================== */}
       {mode === 'quest' && (
-        <div className="pt-12 px-4 sm:px-6 max-w-4xl mx-auto">
-          <div className="mb-4 flex items-center justify-between text-xs tracking-widest text-deep-purple/60 px-1">
-            <button onClick={goToLanding} className="hover:text-romantic-pink transition">← Back to the beginning</button>
-            <div>OUR LITTLE UNIVERSE</div>
-          </div>
+        <div className="quest-stage">
+          <button type="button" onClick={goToLanding} className="quest-stage__back">
+            ← Beginning
+          </button>
 
           <ProgressStars
             currentStep={currentStep}
@@ -696,303 +846,206 @@ export default function App() {
             canJumpToStep={(step) => canJumpToStep(step, answers)}
           />
 
-          <div className="mt-4">
-            <QuestionCard
-              step={currentStep}
-              total={TOTAL_QUESTIONS}
-              prompt={currentQuestion.prompt}
-            >
-              {currentStep === 1 && (
-                <div className="grid gap-4 pt-2 sm:grid-cols-2">
-                  {currentQuestion.options?.map((opt) => {
-                    const selected = answers.vibe === opt.value;
-                    const vibeEmoji: Record<string, string> = {
-                      'stay-in': '🏠',
-                      'go-out': '🌃',
-                      'new-thing': '✨',
-                      'easy-mode': '😌',
-                    };
+          <QuestionCard
+            step={currentStep}
+            total={TOTAL_QUESTIONS}
+            prompt={questPrompt}
+            hint={questHint}
+            onBack={back}
+            onNext={next}
+            nextLabel={currentStep === TOTAL_QUESTIONS ? 'See the plan →' : 'Tear & continue →'}
+            nextDisabled={!canProceed() || (currentStep === TOTAL_QUESTIONS && !isQuestComplete(answers))}
+            helper={nextHelper}
+          >
+            {currentStep === 1 && (
+              <div className="ticket-stub-grid">
+                {currentQuestion.options?.map((opt) => {
+                  const selected = answers.vibe === opt.value;
+                  const codes: Record<string, string> = {
+                    'stay-in': 'Stay',
+                    'go-out': 'Out',
+                    'new-thing': 'New',
+                    'easy-mode': 'Easy',
+                  };
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateAnswer('vibe', opt.value as QuestAnswers['vibe'])}
+                      aria-pressed={selected}
+                      className={`ticket-stub ${selected ? 'selected' : ''}`}
+                    >
+                      <span className="ticket-stub__code">{codes[opt.value] ?? 'Vibe'}</span>
+                      <span className="ticket-stub__label">{opt.label}</span>
+                      <span className="ticket-stub__desc">{opt.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {currentStep === 2 && step2Copy?.mode === 'outing' && (
+              <div className="space-y-5">
+                <div
+                  className="ticket-stamp-row"
+                  role="group"
+                  aria-label="Outing activity"
+                >
+                  {OUTING_ACTIVITY_OPTIONS.map((opt) => {
+                    const selected = answers.outingActivity === opt.value;
                     return (
                       <button
                         key={opt.value}
-                        onClick={() => updateAnswer('vibe', opt.value as QuestAnswers['vibe'])}
-                        className={`sticker-card p-5 text-left focus:outline-none transition-all ${selected ? 'selected ring-2 ring-electric-cyan' : ''}`}
-                      >
-                        <div className="text-3xl mb-3">{vibeEmoji[opt.value] ?? '🌙'}</div>
-                        <div className="font-semibold text-lg">{opt.label}</div>
-                        <div className="text-sm text-charcoal/70 mt-1 leading-snug">{opt.description}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {currentStep === 2 && (
-                <div className="pt-2 space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {currentQuestion.options?.map((opt) => {
-                      const selected = answers.foodFantasy === opt.value;
-                      const vibeHint = getFoodVibeHint(answers.vibe, opt.value);
-                      const foodEmoji: Record<string, string> = {
-                        'home-cooked': '🏠',
-                        restaurant: '🍽️',
-                        takeout: '📦',
-                        cafe: '☕',
-                        casual: '🥡',
-                        fancy: '✨',
-                        surprise: '🎲',
-                      };
-                      return (
-                        <button
-                          key={opt.value}
-                          onClick={() => selectFoodFantasy(opt.value as QuestAnswers['foodFantasy'])}
-                          className={`sticker-card flex gap-4 p-4 text-left focus:outline-none ${selected ? 'selected' : ''}`}
-                        >
-                          <div className="text-4xl opacity-80 mt-0.5">{foodEmoji[opt.value] ?? '🍽️'}</div>
-                          <div>
-                            <div className="font-semibold">{opt.label}</div>
-                            <div className="text-sm text-charcoal/70">{opt.description}</div>
-                            {vibeHint && (
-                              <div className="text-xs text-romantic-pink/80 mt-1">{vibeHint}</div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {answers.foodFantasy === 'restaurant' && (
-                    <div className="sticker-card p-5 space-y-4">
-                      <div className="font-semibold text-deep-navy">What kind of restaurant?</div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {RESTAURANT_CUISINE_OPTIONS.map((opt) => {
-                          const selected = answers.restaurantCuisine === opt.value;
-                          return (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() =>
-                                updateAnswer(
-                                  'restaurantCuisine',
-                                  selected ? undefined : opt.value,
-                                )
-                              }
-                              className={`choice-pill !min-h-0 !py-2 !px-5 text-sm ${selected ? 'selected' : ''}`}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <input
-                        type="text"
-                        value={answers.restaurantNote || ''}
-                        onChange={(e) => updateAnswer('restaurantNote', e.target.value)}
-                        placeholder="A specific spot, dish, or craving…"
-                        className="w-full rounded-2xl border-2 border-deep-purple/20 bg-white/70 px-5 py-3 text-base focus:outline-none focus:border-romantic-pink placeholder:text-charcoal/40"
-                      />
-                      <p className="text-center text-xs text-charcoal/50">
-                        Pick a style, type something, or both.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {currentStep === 3 && (
-                <DateSelector
-                  value={answers.chosenDate || ''}
-                  onChange={(d) => updateAnswer('chosenDate', d)}
-                />
-              )}
-
-              {currentStep === 4 && (
-                <div className="flex flex-wrap gap-2 pt-2 justify-center">
-                  {currentQuestion.options?.map((opt) => {
-                    const selected = answers.feelingWord === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => updateAnswer('feelingWord', opt.value as QuestAnswers['feelingWord'])}
-                        className={`choice-pill !min-h-0 !py-2 !px-5 text-sm ${selected ? 'selected' : ''}`}
+                        type="button"
+                        onClick={() => selectOuting(opt.value)}
+                        aria-pressed={selected}
+                        className={`ticket-stamp ${selected ? 'selected' : ''}`}
                       >
                         {opt.label}
                       </button>
                     );
                   })}
                 </div>
-              )}
-
-              {currentStep === 5 && (
-                <div className="pt-2">
-                  <textarea
-                    value={answers.secretHint || ''}
-                    onChange={(e) => updateAnswer('secretHint', e.target.value)}
-                    placeholder={currentQuestion.placeholder}
-                    className="w-full min-h-[140px] rounded-3xl border-2 border-deep-purple/20 bg-white/70 p-6 text-base focus:outline-none focus:border-romantic-pink placeholder:text-charcoal/40"
+                <div>
+                  <label className="ticket-section-label" htmlFor="outing-note">
+                    {step2Copy.noteLabel}
+                  </label>
+                  <input
+                    id="outing-note"
+                    type="text"
+                    value={answers.outingNote || ''}
+                    onChange={(e) => updateOutingNote(e.target.value)}
+                    placeholder="A place, activity, or vibe for the night…"
+                    className="ticket-field"
                   />
-                  <p className="text-center text-xs text-charcoal/50 mt-3">Optional — I read all of it.</p>
+                  <p className="ticket-note">{step2Copy.noteHelper}</p>
                 </div>
-              )}
-            </QuestionCard>
-          </div>
+              </div>
+            )}
 
-          {/* Wizard controls — large, thumb-friendly, warm */}
-          <div className="mt-8 flex items-center justify-between max-w-3xl mx-auto px-2">
-            <button
-              onClick={back}
-              className="text-sm underline text-charcoal/70 hover:text-romantic-pink active:opacity-70"
-            >
-              ← Back
-            </button>
+            {currentStep === 2 && step2Copy?.mode !== 'outing' && (
+              <div className="space-y-5">
+                <div
+                  className="ticket-stamp-row"
+                  role="group"
+                  aria-label="Cuisine"
+                >
+                  {RESTAURANT_CUISINE_OPTIONS.map((opt) => {
+                    const selected = answers.restaurantCuisine === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => selectCuisine(opt.value)}
+                        aria-pressed={selected}
+                        className={`ticket-stamp ${selected ? 'selected' : ''}`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <label className="ticket-section-label" htmlFor="restaurant-note">
+                    {step2Copy?.noteLabel ?? 'Or write a craving'}
+                  </label>
+                  <input
+                    id="restaurant-note"
+                    type="text"
+                    value={answers.restaurantNote || ''}
+                    onChange={(e) => updateRestaurantNote(e.target.value)}
+                    placeholder="A specific spot, dish, or craving…"
+                    className="ticket-field"
+                  />
+                  <p className="ticket-note">
+                    {step2Copy?.noteHelper ?? 'Pick a cuisine, type something, or both.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
-            <button
-              onClick={next}
-              disabled={!canProceed() || (currentStep === TOTAL_QUESTIONS && !isQuestComplete(answers))}
-              className={`pill-button primary disabled:opacity-40 disabled:cursor-not-allowed ${!canProceed() || (currentStep === TOTAL_QUESTIONS && !isQuestComplete(answers)) ? 'pointer-events-none' : ''}`}
-            >
-              {currentStep === TOTAL_QUESTIONS ? 'See the summary →' : 'Next →'}
-            </button>
-          </div>
+            {currentStep === 3 && (
+              <DateSelector
+                value={answers.chosenDate || ''}
+                time={answers.chosenTime || DEFAULT_CHOSEN_TIME}
+                onChange={(d) => updateAnswer('chosenDate', d)}
+                onTimeChange={(t) => updateAnswer('chosenTime', t)}
+              />
+            )}
+
+            {currentStep === 4 && (
+              <div>
+                <label className="ticket-section-label" htmlFor="secret-hint">
+                  Optional note
+                </label>
+                <textarea
+                  id="secret-hint"
+                  value={answers.secretHint || ''}
+                  onChange={(e) => updateAnswer('secretHint', e.target.value)}
+                  placeholder={currentQuestion.placeholder}
+                  className="ticket-field min-h-[140px] resize-y"
+                />
+                <p className="ticket-note">Optional — I read all of it.</p>
+              </div>
+            )}
+          </QuestionCard>
         </div>
       )}
 
       {/* ==================== THE GRAND REVEAL — CELEBRATION ==================== */}
-      {mode === 'celebration' && (
-        <div className="pt-12 px-5 max-w-3xl mx-auto text-center">
-          <div className="mb-6">
-            <div className="uppercase tracking-[3px] text-xs text-romantic-pink">ALL SET</div>
-            <h1 className="mt-2 text-4xl sm:text-[42px] leading-none">Here&apos;s What We Picked</h1>
-          </div>
+      {mode === 'celebration' && questComplete && (
+        <CelebrationReveal
+          answers={answers as QuestAnswers}
+          lockedPlan={lockedPlan}
+          showLoveMessage={showLoveMessage}
+          showCelebrationMore={showCelebrationMore}
+          onLock={lockDateInHeart}
+          onCopyNote={copySweetNote}
+          onAddToCalendar={addToCalendar}
+          onToggleMore={() => setShowCelebrationMore((open) => !open)}
+          onDownloadKeepsake={downloadKeepsake}
+          onOpenWhisper={openWhisper}
+          onTweak={tweakPlan}
+          onEditStep={editStep}
+          onClear={clearEverything}
+          whisperOpenerRef={whisperOpenerRef}
+        />
+      )}
 
-          <div className="flex justify-center mb-8">
-            <CoupleCartoon size={360} />
-          </div>
-
-          {/* The locked date — unmistakably special */}
-          {answers.chosenDate && (
-            <div className="inline-block sticker-card px-9 py-7 mb-8">
-              <div className="text-xs tracking-[2px] text-deep-purple/70">OUR NIGHT</div>
-              <div className="text-4xl sm:text-[42px] font-semibold tracking-[-1.2px] mt-1 text-deep-navy">
-                {formatLockedDate(answers.chosenDate)}
-              </div>
-            </div>
-          )}
-
-          {/* The Map of the Night We Chose — her six answers turned into a private sky */}
-          {questComplete && (
-            <div className="max-w-lg mx-auto mb-8">
-              <div className="uppercase text-xs tracking-widest text-romantic-pink mb-2">YOUR PICKS</div>
-              <div className="sticker-card p-3 sm:p-4">
-                <ConstellationMap plan={lockedPlan ?? (answers as QuestAnswers)} />
-              </div>
-              <p className="text-xs text-charcoal/55 mt-2">One dot per answer</p>
-            </div>
-          )}
-
-          {!questComplete && (
-            <div className="max-w-md mx-auto mb-10 space-y-4">
-              <p className="text-charcoal/80">A few questions still need answers before we can lock this in.</p>
-              <button onClick={() => goToStep(1)} className="pill-button secondary">
-                Back to the quest
-              </button>
-            </div>
-          )}
-
-          {/* Lock action */}
-          {questComplete && (
-            <div className="max-w-md mx-auto text-left text-[15px] leading-relaxed text-charcoal/90 mb-8">
-              {generateSummary(answers as QuestAnswers)}
-            </div>
-          )}
-
-          {/* Constellation ideas — romantic & executable */}
-          {questComplete && (
-            <div className="max-w-lg mx-auto mb-10 text-left">
-              <div className="uppercase text-xs tracking-widest text-romantic-pink mb-3">IDEAS FOR THE NIGHT</div>
-              <ul className="space-y-3 text-[15px]">
-                {getConstellationIdeas(answers as QuestAnswers).map((idea, i) => (
-                  <li key={i} className="pl-1 flex gap-3">
-                    <span className="text-sunny-yellow mt-1">✧</span>
-                    <span>{idea}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* The primary action — the emotional peak */}
-          {!showLoveMessage && (
-            <button
-              onClick={lockDateInHeart}
-              className="pill-button primary text-xl px-12 py-5 shadow-2xl shadow-romantic-pink/40"
-            >
-              Lock it in
+      {mode === 'celebration' && !questComplete && (
+        <div className="quest-stage !max-w-xl">
+          <div className="celeb-ticket mb-8 p-8 text-center">
+            <p className="quest-ticket__hint !mt-0">
+              A few questions still need answers before I can finish the plan.
+            </p>
+            <button type="button" onClick={() => goToStep(1)} className="pill-button secondary mt-4">
+              Back to the quest
             </button>
-          )}
-
-          {/* After locking — the real message + secondary actions */}
-          <AnimatePresence>
-            {showLoveMessage && lockedPlan && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-10 max-w-xl mx-auto"
-              >
-                <div
-                  className="sticker-card p-8 sm:p-10 text-left whitespace-pre-wrap text-[15.2px] leading-relaxed"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {getPersonalizedLoveMessage(lockedPlan)}
-                </div>
-
-                <div className="flex flex-wrap justify-center gap-3 mt-8">
-                  <button onClick={addToCalendar} className="pill-button secondary text-sm">
-                    Add to calendar
-                  </button>
-                  <button onClick={copySweetNote} className="pill-button secondary text-sm">
-                    Copy a short note
-                  </button>
-                  <button onClick={downloadKeepsake} className="pill-button secondary text-sm">
-                    Save constellation image
-                  </button>
-                  <button onClick={openWhisper} className="pill-button secondary text-sm">
-                    Something to say tonight
-                  </button>
-                  <button onClick={tweakPlan} className="text-sm underline text-charcoal/70 hover:text-romantic-pink">
-                    I want to change something
-                  </button>
-                  <button onClick={clearEverything} className="text-xs text-charcoal/50 hover:text-romantic-pink underline">
-                    Clear everything & start over
-                  </button>
-                </div>
-
-                <div className="mt-10 text-xs text-deep-purple/60 tracking-widest">
-                  SAVED IN YOUR BROWSER. REFRESH AND IT&apos;S STILL HERE.
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          </div>
         </div>
       )}
 
-      {/* Footer love note — tiny, always present */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-charcoal/40 tracking-widest pointer-events-none">
-        MADE FOR YOU
-      </div>
+      {/* Footer love note — tiny, always present (skipped on night-ticket landing) */}
+      {!isFirstVisitLanding && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 app-footer-mark">
+          MADE FOR YOU
+        </div>
+      )}
 
-      {/* Feature 4: Whisper modal — reuses the exact AnimatePresence + sticker-card + framer pattern */}
+      {/* Feature 4: Whisper modal */}
       <AnimatePresence>
         {showWhisper && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
-            onClick={() => setShowWhisper(false)}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-night-deep/70 px-4"
+            onClick={closeWhisper}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={whisperTitleId}
               initial={{ opacity: 0, y: 16, scale: 0.985 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.99 }}
@@ -1000,34 +1053,42 @@ export default function App() {
               className="w-full max-w-md"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sticker-card p-8 sm:p-9 text-center relative">
-                <div className="text-[15.5px] leading-relaxed text-deep-navy/90">
+              <div className="sticker-card p-8 sm:p-9 text-center">
+                <h2 id={whisperTitleId} className="sr-only">
+                  Something to say tonight
+                </h2>
+                <div
+                  className="text-[15.5px] leading-relaxed text-night-deep/90"
+                  role="status"
+                  aria-live="polite"
+                >
                   {currentWhisper}
-                </div>
-
-                <div className="absolute -bottom-2 -right-2 opacity-90">
-                  {lockedPlan && (
-                    <CoupleCartoon size={128} alt="Us" />
-                  )}
                 </div>
 
                 <div className="mt-8 flex flex-col items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => {
                       if (!lockedPlan) return;
                       setCurrentWhisper(getWhisperForPlan(lockedPlan));
                     }}
-                    className="text-sm text-deep-purple/70 hover:text-romantic-pink underline transition"
+                    className="text-sm text-night-deep/70 hover:text-night-amber underline transition"
                   >
                     Another one
                   </button>
                   <button
-                    onClick={() => setShowWhisper(false)}
+                    ref={whisperCloseRef}
+                    type="button"
+                    onClick={closeWhisper}
                     className="pill-button secondary text-sm mt-1"
-                    autoFocus
                   >
                     {CLOSE_PHRASES[0]}
                   </button>
+                  {lockedPlan && (
+                    <div className="mt-4">
+                      <CoupleCartoon size={96} alt="Us" />
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

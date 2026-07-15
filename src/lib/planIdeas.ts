@@ -5,8 +5,14 @@
 
 import type { QuestAnswers } from './types';
 import { VIBE_MIGRATION } from './planStorage';
-import { getHintExtraSentence } from './loveMessage';
-import { formatRestaurantDetail, getRestaurantCuisineLabel } from './questions';
+import {
+  formatFoodAnswer,
+  formatOutingAnswer,
+  getOutingActivityLabel,
+  getRestaurantCuisineLabel,
+  getVibeCategoryLabel,
+  isOutingStepVibe,
+} from './questions';
 
 type VibeSlug = 'stay-in' | 'go-out' | 'new-thing' | 'easy-mode';
 
@@ -35,20 +41,29 @@ function getFoodIdea(vibe: VibeSlug, food: string, answers?: Partial<QuestAnswer
         answers?.restaurantCuisine && answers.restaurantCuisine !== 'surprise'
           ? getRestaurantCuisineLabel(answers.restaurantCuisine).toLowerCase()
           : null;
+      const note = answers?.restaurantNote?.trim() || null;
       if (vibe === 'stay-in') {
+        if (cuisine && note) {
+          return `Order ${cuisine} to-go — you mentioned ${note} — and turn the living room into your private restaurant.`;
+        }
         if (cuisine) {
           return `Order something special to-go from a favorite ${cuisine} spot and turn the living room into your private restaurant.`;
         }
+        if (note) {
+          return `Order something special to-go — you mentioned ${note} — and turn the living room into your private restaurant.`;
+        }
         return 'Order something special to-go from a favorite spot and turn the living room into your private restaurant.';
       }
-      const detail = answers ? formatRestaurantDetail(answers) : null;
+      if (cuisine && note) {
+        return `I'll find a ${cuisine} sit-down spot — you mentioned ${note}.`;
+      }
       if (cuisine) {
-        return `Find a ${cuisine} sit-down spot and order whatever sounds good that night.`;
+        return `I'll find a ${cuisine} sit-down spot.`;
       }
-      if (detail) {
-        return `Pick a sit-down spot — she's thinking ${detail.toLowerCase()}.`;
+      if (note) {
+        return `I'll find a sit-down spot — you mentioned ${note}.`;
       }
-      return 'Pick a sit-down spot and order whatever sounds good that night.';
+      return "I'll find a sit-down spot.";
     }
     case 'takeout':
       if (vibe === 'go-out' || vibe === 'new-thing') {
@@ -64,7 +79,7 @@ function getFoodIdea(vibe: VibeSlug, food: string, answers?: Partial<QuestAnswer
       return 'Keep food unfussy — quick bite, then back to the evening.';
     case 'fancy':
       if (vibe === 'easy-mode') {
-        return 'Book somewhere nice — you handle reservations and she just shows up looking great.';
+        return 'Book somewhere nice — I\'ll handle reservations; you just show up looking great.';
       }
       if (vibe === 'stay-in') {
         return "Fancy doesn't have to mean leaving — dress up at home with a special spread and candles.";
@@ -73,8 +88,29 @@ function getFoodIdea(vibe: VibeSlug, food: string, answers?: Partial<QuestAnswer
     case 'surprise':
       return 'You handle food entirely — match her vibe and hint.';
     default:
-      return 'Match food to the vibe she picked — thoughtful, not complicated.';
+      return 'Match food to what you wanted — thoughtful, not complicated.';
   }
+}
+
+function getOutingIdea(answers: Partial<QuestAnswers>): string {
+  const activity =
+    answers.outingActivity && answers.outingActivity !== 'surprise'
+      ? getOutingActivityLabel(answers.outingActivity).toLowerCase()
+      : null;
+  const note = answers.outingNote?.trim() || null;
+  if (answers.outingActivity === 'surprise') {
+    return "You trusted me with the plan — I'll pick something worth leaving the house for.";
+  }
+  if (activity && note) {
+    return `I'll build the night around ${activity} — you mentioned ${note}.`;
+  }
+  if (activity) {
+    return `I'll build the night around ${activity}.`;
+  }
+  if (note) {
+    return `I'll build the night around that — you mentioned ${note}.`;
+  }
+  return "I'll pick a main destination and build the night around getting there.";
 }
 
 function getVibeIdea(vibe: VibeSlug): string {
@@ -86,7 +122,7 @@ function getVibeIdea(vibe: VibeSlug): string {
     case 'new-thing':
       return 'Book or scout something you two have not done recently.';
     case 'easy-mode':
-      return 'You own the plan end-to-end — she should not have to decide anything else.';
+      return 'I\'ll handle everything — you won\'t have to decide anything else.';
     default: {
       const _exhaustive: never = vibe;
       return _exhaustive;
@@ -94,40 +130,174 @@ function getVibeIdea(vibe: VibeSlug): string {
   }
 }
 
-function getClosingIdea(feelingWord: string): string {
-  const closings: Record<string, string> = {
-    giggly: 'Queue up something silly right before bed so she goes to sleep smiling.',
-    cherished: 'Slow dancing in the kitchen to the song from when you first said "I love you".',
-    spoiled: 'One extra pampering beat at the end — dessert, foot rub, or both.',
-    silly: 'End with something ridiculous on purpose — inside jokes welcome.',
-    adventurous: 'Save one small surprise for the very end of the night.',
-    peaceful: 'Wind down together with zero phones and nowhere else to be.',
-    electric: 'Build to one sparky moment — lights low, music up, just you two.',
-    home: 'Make the space feel unmistakably yours — familiar, warm, completely safe.',
-    loved: 'Slow dancing in the kitchen to the song from when you first said "I love you".',
-  };
-  return closings[feelingWord] ?? closings.loved;
-}
-
 /** Returns 3–4 executable ideas harmonized with her full answer set. */
 export function getConstellationIdeas(answers: QuestAnswers): string[] {
+  return getChoiceAlignedPlan(answers).map((row) => row.plan);
+}
+
+export interface ChoicePlanRow {
+  /** Which quest answer this row comes from */
+  from: 'vibe' | 'food' | 'when' | 'hint';
+  /** Category chrome for the row (Vibe / Food / When / Your note) */
+  label: string;
+  /** Her choice — the editable answer she taps to change */
+  choice: string;
+  /** What he's planning from that choice */
+  plan: string;
+}
+
+const CHOICE_LABELS: Record<ChoicePlanRow['from'], string> = {
+  vibe: 'Vibe',
+  food: 'Food',
+  when: 'When',
+  hint: 'Your note',
+};
+
+/**
+ * Plan rows labeled by quest category, with her answer as the editable choice.
+ */
+export function getChoiceAlignedPlan(answers: QuestAnswers): ChoicePlanRow[] {
   const vibe = toVibeSlug(answers.vibe);
-  const ideas: string[] = [];
+  const outingNight = isOutingStepVibe(answers.vibe);
+  const rows: ChoicePlanRow[] = [
+    {
+      from: 'vibe',
+      label: CHOICE_LABELS.vibe,
+      choice: getVibeCategoryLabel(answers.vibe),
+      plan: getVibeIdea(vibe),
+    },
+    outingNight
+      ? {
+          from: 'food',
+          label: 'Outing',
+          choice: formatOutingAnswer(answers),
+          plan: getOutingIdea(answers),
+        }
+      : {
+          from: 'food',
+          label: CHOICE_LABELS.food,
+          choice:
+            formatFoodAnswer(answers) ||
+            getRestaurantCuisineLabel(answers.restaurantCuisine ?? '') ||
+            'Food',
+          plan:
+            answers.foodFantasy === 'surprise'
+              ? "You trusted me with food — I'll make every surprise count."
+              : getFoodIdea(vibe, answers.foodFantasy, answers),
+        },
+    {
+      from: 'when',
+      label: CHOICE_LABELS.when,
+      choice: formatWhenChoice(answers.chosenDate, answers.chosenTime),
+      plan: getWhenIdea(vibe, answers.chosenTime),
+    },
+  ];
 
-  if (answers.foodFantasy === 'surprise') {
-    ideas.push("You trusted me with food — I'll make every surprise count.");
+  const hint = answers.secretHint?.trim();
+  if (hint) {
+    rows.push({
+      from: 'hint',
+      label: CHOICE_LABELS.hint,
+      choice: hint,
+      plan: "I'll read your note!",
+    });
   }
 
-  ideas.push(getFoodIdea(vibe, answers.foodFantasy, answers));
-  ideas.push(getVibeIdea(vibe));
-  ideas.push(getClosingIdea(answers.feelingWord));
+  return rows;
+}
 
-  const extra = getHintExtraSentence(answers);
-  if (extra && ideas.length > 0) {
-    ideas[ideas.length - 1] = `${ideas[ideas.length - 1]} ${extra}`;
+/**
+ * Short lyrical lines for the celebration blurb — vibe / food / lock — not a logistics sentence.
+ */
+export function getArtfulSummaryLines(answers: QuestAnswers): [string, string, string] {
+  const vibe = toVibeSlug(answers.vibe);
+  const food = formatFoodAnswer(answers).trim();
+  const outing = formatOutingAnswer(answers).trim();
+
+  const vibeLine = (() => {
+    switch (vibe) {
+      case 'stay-in':
+        return 'Home. Soft light. Just us.';
+      case 'go-out':
+        return 'Out into the night.';
+      case 'new-thing':
+        return 'Something we haven’t done.';
+      case 'easy-mode':
+        return 'You rest. I handle it.';
+      default: {
+        const _exhaustive: never = vibe;
+        return _exhaustive;
+      }
+    }
+  })();
+
+  const foodLine = (() => {
+    if (isOutingStepVibe(answers.vibe)) {
+      if (answers.outingActivity === 'surprise') return 'The plan is my surprise.';
+      if (outing && outing !== 'Outing') return `${outing}.`;
+      return 'A night out, handled.';
+    }
+    if (answers.foodFantasy === 'surprise') return 'Food is my surprise.';
+    if (food) return `${food}.`;
+    switch (answers.foodFantasy) {
+      case 'home-cooked':
+        return 'Cooking together.';
+      case 'takeout':
+        return 'Takeout, no dishes.';
+      case 'cafe':
+        return 'A sweet café stop.';
+      case 'fancy':
+        return 'A little fancy.';
+      case 'casual':
+        return 'Nothing fussy.';
+      case 'restaurant':
+        return 'A table somewhere.';
+      default:
+        return 'Food, handled.';
+    }
+  })();
+
+  return [vibeLine, foodLine, 'Locked in — can’t wait.'];
+}
+
+function formatWhenChoice(iso: string, time: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  const day = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const [hStr, mStr] = (time || '19:00').split(':');
+  let h = Number(hStr);
+  const m = Number(mStr) || 0;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const timeLabel = m === 0 ? `${h} ${ampm}` : `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+  return `${day} · ${timeLabel}`;
+}
+
+function getWhenIdea(vibe: VibeSlug, time: string): string {
+  const [hStr, mStr] = (time || '19:00').split(':');
+  let h = Number(hStr);
+  const m = Number(mStr) || 0;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const timeLabel = m === 0 ? `${h} ${ampm}` : `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+
+  switch (vibe) {
+    case 'stay-in':
+      return `Night starts at ${timeLabel} at home — I'll have things ready before you need to do anything.`;
+    case 'go-out':
+      return `We'll aim for ${timeLabel} — enough time to get there without rushing.`;
+    case 'new-thing':
+      return `Locked for ${timeLabel} — I'll handle getting us there for whatever we try.`;
+    case 'easy-mode':
+      return `${timeLabel} is set. You don't need to track anything else that night.`;
+    default: {
+      const _exhaustive: never = vibe;
+      return _exhaustive;
+    }
   }
-
-  return ideas.slice(0, 4);
 }
 
 /** Test helper — detects known contradiction patterns in generated ideas. */
@@ -148,7 +318,7 @@ export function hasContradictoryIdeas(ideas: string[], vibe: string, food: strin
   }
 
   if (vibeS === 'easy-mode' && food === 'fancy') {
-    if (text.includes('dress up a little and book') && !text.includes('you handle')) {
+    if (text.includes('dress up a little and book') && !text.includes('handle')) {
       return true;
     }
   }

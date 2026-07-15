@@ -1,10 +1,6 @@
 import type { LockedPlan } from './types';
-import {
-  getFoodCategoryLabel,
-  getVibeCategoryLabel,
-  getFeelingWordLabel,
-  formatRestaurantDetail,
-} from './questions';
+import { formatRestaurantDetail, getFoodCategoryLabel, getVibeCategoryLabel } from './questions';
+import { DEFAULT_CHOSEN_TIME, formatTimeForDisplay } from './utils';
 
 /**
  * THE HEART OF THE GIFT
@@ -21,6 +17,7 @@ export function getLoveMessage(plan: LockedPlan): string {
     month: 'long',
     day: 'numeric',
   });
+  const timeStr = formatTimeForDisplay(plan.chosenTime ?? DEFAULT_CHOSEN_TIME);
 
   const vibe = getVibeCategoryLabel(plan.vibe).toLowerCase();
   const foodBase = getFoodCategoryLabel(plan.foodFantasy).toLowerCase();
@@ -29,19 +26,18 @@ export function getLoveMessage(plan: LockedPlan): string {
     plan.foodFantasy === 'restaurant' && restaurantDetail
       ? `${foodBase} — ${restaurantDetail.toLowerCase()}`
       : foodBase;
-  const feeling = getFeelingWordLabel(plan.feelingWord).toLowerCase();
 
   const foodSurprise = plan.foodFantasy === 'surprise';
 
   return `Hey Jennifer,
 
-You picked ${dateStr}. I've been looking forward to it.
+Our night is ${dateStr} at ${timeStr}. I've been planning it.
 
-It's just us — exactly how I want it. You said ${vibe} and ${food} for food. You want to feel ${feeling} — I'm going to make sure you do.
+You said you'd love ${vibe} and ${food} for food. I've got it all planned.
 ${foodSurprise ? '\nYou trusted me with food. I take that seriously.\n' : ''}
-I've got some ideas on this screen, but honestly the plan is simple: no distractions, just us, doing the thing we picked together.
+I've got some ideas on this screen, but the plan is simple: no distractions, just us, doing what I put together for you.
 
-Thanks for going through this with me. It made planning the night a lot more fun.
+Thanks for telling me what you wanted. Made planning this a lot more fun.
 
 I love you.
 

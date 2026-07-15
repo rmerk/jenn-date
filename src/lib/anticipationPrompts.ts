@@ -24,7 +24,7 @@ const ANTICIPATION_POOL: TaggedAnticipation[] = [
     vibes: ['stay-in', 'go-out', 'new-thing', 'easy-mode'],
   },
   {
-    text: () => "Been thinking about what you picked. You're going to love it.",
+    text: () => "Been thinking about what you told me. You're going to love it.",
     vibes: ['stay-in', 'go-out', 'new-thing', 'easy-mode'],
   },
   {
@@ -43,7 +43,7 @@ const ANTICIPATION_POOL: TaggedAnticipation[] = [
     foods: ['restaurant', 'home-cooked', 'takeout', 'cafe', 'fancy', 'casual'],
   },
   {
-    text: () => 'Something new is on the books. You picked that — remember?',
+    text: () => 'Something new is on the books — that\'s what you wanted, right?',
     vibes: ['new-thing'],
   },
   {

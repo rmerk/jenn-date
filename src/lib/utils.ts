@@ -8,12 +8,62 @@ import { getHintExtraSentence, getLoveMessage } from './loveMessage';
 import {
   getFoodCategoryLabel,
   getVibeCategoryLabel,
-  getFeelingWordLabel,
   formatRestaurantDetail,
 } from './questions';
 import { getConstellationIdeas } from './planIdeas';
 
 export { getConstellationIdeas } from './planIdeas';
+
+/** Default evening start — matches the original hard-coded calendar window. */
+export const DEFAULT_CHOSEN_TIME = '19:00';
+
+const EVENT_DURATION_HOURS = 4;
+
+/** Pretty 12-hour label from 24h HH:mm. */
+export function formatTimeForDisplay(time24: string): string {
+  const [hourPart, minutePart] = time24.split(':');
+  const hours = Number(hourPart);
+  const minutes = Number(minutePart);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return time24;
+
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+/** ICS floating local datetime: YYYYMMDDTHHMMSS */
+export function toIcsLocalDateTime(isoDate: string, time24: string): string {
+  const [hourPart, minutePart] = time24.split(':');
+  return `${isoDate.replace(/-/g, '')}T${hourPart}${minutePart}00`;
+}
+
+function addHoursToTime(time24: string, hoursToAdd: number): string {
+  const [hourPart, minutePart] = time24.split(':');
+  const totalMinutes = Number(hourPart) * 60 + Number(minutePart) + hoursToAdd * 60;
+  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hours = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+export function getPlanIcsWindow(plan: Pick<LockedPlan, 'chosenDate' | 'chosenTime'>): {
+  start: string;
+  end: string;
+} {
+  const startTime = plan.chosenTime ?? DEFAULT_CHOSEN_TIME;
+  return {
+    start: toIcsLocalDateTime(plan.chosenDate, startTime),
+    end: toIcsLocalDateTime(plan.chosenDate, addHoursToTime(startTime, EVENT_DURATION_HOURS)),
+  };
+}
+
+/** Local calendar day as YYYY-MM-DD (avoids UTC shift from toISOString). */
+export function toLocalISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 /** Returns an array of upcoming dates (YYYY-MM-DD) starting tomorrow, for N days. */
 export function getUpcomingDates(count = 21): string[] {
@@ -24,8 +74,7 @@ export function getUpcomingDates(count = 21): string[] {
   for (let i = 1; i <= count; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const iso = d.toISOString().split('T')[0];
-    dates.push(iso);
+    dates.push(toLocalISODate(d));
   }
   return dates;
 }
@@ -58,7 +107,7 @@ export function getNextFriday(): string {
   const daysUntilFriday = (5 - day + 7) % 7 || 7; // next Friday, at least +1 day
   const friday = new Date(today);
   friday.setDate(today.getDate() + daysUntilFriday);
-  return friday.toISOString().split('T')[0];
+  return toLocalISODate(friday);
 }
 
 export function getNextSaturday(): string {
@@ -68,18 +117,20 @@ export function getNextSaturday(): string {
   const daysUntilSat = (6 - day + 7) % 7 || 7;
   const sat = new Date(today);
   sat.setDate(today.getDate() + daysUntilSat);
-  return sat.toISOString().split('T')[0];
+  return toLocalISODate(sat);
 }
 
 export function getNextWeekend(): string {
-  // Prefer this coming Saturday for "next weekend"
-  return getNextSaturday();
+  // Weekend after this coming Saturday — must stay distinct from getNextSaturday()
+  const thisSaturday = getNextSaturday();
+  const d = new Date(`${thisSaturday}T00:00:00`);
+  d.setDate(d.getDate() + 7);
+  return toLocalISODate(d);
 }
 
 /** Very small, warm, romantic summary generator for the vertical slice. */
 export function generateSummary(answers: QuestAnswers): string {
   const vibeText = getVibeCategoryLabel(answers.vibe).toLowerCase();
-  const feelingText = getFeelingWordLabel(answers.feelingWord).toLowerCase();
 
   const foodLabel = getFoodCategoryLabel(answers.foodFantasy).toLowerCase();
   const restaurantDetail = formatRestaurantDetail(answers);
@@ -88,7 +139,7 @@ export function generateSummary(answers: QuestAnswers): string {
       ? `${foodLabel} — ${restaurantDetail.toLowerCase()}`
       : foodLabel;
 
-  let base = `You picked ${vibeText}. Food: ${foodText}. You want to feel ${feelingText} — and you will.`;
+  let base = `I'm planning ${vibeText}. Food: ${foodText}. Locked in — can't wait.`;
 
   if (answers.foodFantasy === 'surprise') {
     base += " You're trusting me with food — I won't let you down.";
@@ -132,9 +183,9 @@ export function isAnniversary(iso: string): boolean {
 }
 
 /** Pretty print for the locked celebration header. */
-export function formatLockedDate(iso: string): string {
+export function formatLockedDate(iso: string, time = DEFAULT_CHOSEN_TIME): string {
   const { full } = formatDateForDisplay(iso);
-  return `${full} in the evening`;
+  return `${full} at ${formatTimeForDisplay(time)}`;
 }
 
 /* ============================================================
@@ -159,15 +210,15 @@ export function downloadTextFile(filename: string, content: string) {
 export function generateExecutionChecklist(plan: LockedPlan): string {
   const date = new Date(plan.chosenDate + 'T00:00:00');
   const pretty = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const timeLabel = formatTimeForDisplay(plan.chosenTime ?? DEFAULT_CHOSEN_TIME);
 
   const items = [
-    `Date locked: ${pretty} (evening)`,
+    `Date locked: ${pretty} at ${timeLabel}`,
     `Vibe: ${getVibeCategoryLabel(plan.vibe)}`,
     `Food: ${getFoodCategoryLabel(plan.foodFantasy)}`,
     ...(formatRestaurantDetail(plan)
       ? [`Restaurant style: ${formatRestaurantDetail(plan)}`]
       : []),
-    `She wants to feel: ${plan.feelingWord}`,
     plan.secretHint?.trim() ? `Her hint: "${plan.secretHint.trim()}"` : 'No secret hint — still nail the vibe',
     ...getConstellationIdeas(plan).map((idea) => `[ ] ${idea}`),
   ];
@@ -205,9 +256,7 @@ Generated when she locked the date. Stays on your devices only.
 /** Generates a simple .ics calendar file with the rich description embedded */
 export function generateLoveBriefICS(plan: LockedPlan): string {
   const date = new Date(plan.chosenDate + 'T00:00:00');
-  // Use 19:00–23:00 as a gentle default evening window (easy for the husband to tweak)
-  const start = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'T190000';
-  const end = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'T230000';
+  const { start, end } = getPlanIcsWindow(plan);
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
   const summary = `Our Special Evening — ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
@@ -232,17 +281,17 @@ export function generateLoveBriefICS(plan: LockedPlan): string {
 /** Jennifer-facing calendar event — short and practical, no husband brief embedded. */
 export function generateJenniferCalendarICS(plan: LockedPlan): string {
   const date = new Date(plan.chosenDate + 'T00:00:00');
-  const start = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'T190000';
-  const end = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'T230000';
+  const { start, end } = getPlanIcsWindow(plan);
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const timeLabel = formatTimeForDisplay(plan.chosenTime ?? DEFAULT_CHOSEN_TIME);
 
   const summary = `Date night — ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
   const desc = [
     `Vibe: ${getVibeCategoryLabel(plan.vibe)}`,
     `Food: ${getFoodCategoryLabel(plan.foodFantasy)}`,
-    `You want to feel: ${plan.feelingWord}`,
+    `Starts at ${timeLabel}`,
     '',
-    'Locked in Our Little Universe.',
+    'Planned in Our Little Universe.',
   ]
     .join('\\n')
     .replace(/,/g, '\\,');

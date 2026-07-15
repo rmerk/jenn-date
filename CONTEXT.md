@@ -1,15 +1,15 @@
 # Our Little Universe
 
-A private date-planning gift from one partner to another. Jennifer picks preferences; her husband executes the real evening. No accounts, no backend — everything stays in the browser.
+A private date-planning gift from one partner to another. Jennifer shares what she'd love; her husband plans and runs the evening. No accounts, no backend — everything stays in the browser.
 
 ## Language
 
 **LockedPlan**:
-Her confirmed answers for one date night, saved when she taps lock.
+His finished plan for one date night — built from her answers — saved when she confirms. Lives in the active slot until cleared.
 _Avoid_: Saved quest, locked date object
 
 **DateChapter**:
-A LockedPlan plus an optional post-date debrief — one entry in the couple's date history.
+A closed chapter in the couple's date history — the same shape as a LockedPlan, plus an optional debrief. Auto-archives when the chosen date passes or when she saves a debrief.
 _Avoid_: Memory entry, archive record
 
 **Love Brief**:
@@ -21,7 +21,7 @@ An optional one-line answer to "What was the highlight?" after the date passes.
 _Avoid_: Anniversary note, journal entry, memory capture
 
 **Quest**:
-The seven-question flow where she picks vibe, food, date, and an optional hint.
+The four-question flow where she tells him what she'd love — vibe, food, date, and an optional hint — so he can plan the night.
 _Avoid_: Survey, onboarding, wizard
 
 **Vibe**:

@@ -8,8 +8,7 @@ function isValidLockedPlan(value: unknown): value is LockedPlan {
     plan.chosenDate &&
       plan.lockedAt &&
       plan.vibe &&
-      plan.foodFantasy &&
-      plan.feelingWord,
+      plan.foodFantasy,
   );
 }
 
@@ -29,6 +28,7 @@ export function normalizeLockedPlan(plan: LockedPlan): LockedPlan {
   let normalized: LockedPlan = {
     ...plan,
     vibe: migrateVibe(plan.vibe),
+    chosenTime: plan.chosenTime ?? '19:00',
   };
   if (normalized.anniversaryNote && !normalized.debriefHighlight) {
     const { anniversaryNote, ...rest } = normalized;

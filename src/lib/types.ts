@@ -6,10 +6,14 @@
 export interface QuestAnswers {
   vibe: string;           // 'stay-in' | 'go-out' | 'new-thing' | 'easy-mode'
   foodFantasy: string;
-  restaurantCuisine?: string; // cuisine pill when foodFantasy is 'restaurant'
-  restaurantNote?: string;    // free-text spot/craving when foodFantasy is 'restaurant'
+  restaurantCuisine?: string; // cuisine stamp on the food step
+  restaurantNote?: string;    // free-text spot/craving on the food step
+  /** Activity stamp when vibe is go-out (step 2 becomes outing, not food). */
+  outingActivity?: string;
+  /** Free-text outing idea when vibe is go-out. */
+  outingNote?: string;
   chosenDate: string;     // ISO date string YYYY-MM-DD (future only)
-  feelingWord: string;
+  chosenTime: string;     // 24h HH:mm — start time for the evening
   secretHint?: string;
 }
 
@@ -21,6 +25,8 @@ export interface LockedPlan extends QuestAnswers {
   anniversaryNote?: string;
   /** @deprecated legacy mascot choice — ignored on load */
   mascotId?: string;
+  /** @deprecated removed from quest — ignored on load */
+  feelingWord?: string;
 }
 
 /** One locked plan plus optional debrief — a single chapter in the couple's date history. */

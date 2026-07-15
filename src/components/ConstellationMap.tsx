@@ -39,7 +39,7 @@ export function ConstellationMap({
 
   const label =
     ariaLabel ??
-    'A constellation made from your answers, with the chosen date glowing as the brightest star.';
+    'A constellation built from what you told me, with the chosen date glowing as the brightest star.';
 
   return (
     <svg
@@ -53,8 +53,8 @@ export function ConstellationMap({
       <defs>
         <radialGradient id="constellation-glow" cx="50%" cy="45%" r="65%">
           <stop offset="0%" stopColor={data.accent} stopOpacity="0.16" />
-          <stop offset="60%" stopColor="#9D4EDD" stopOpacity="0.05" />
-          <stop offset="100%" stopColor="#FFF8F0" stopOpacity="0" />
+          <stop offset="60%" stopColor="#2a5550" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#f7f0e4" stopOpacity="0" />
         </radialGradient>
         <filter id="constellation-soft" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="3.2" result="b" />
@@ -75,7 +75,7 @@ export function ConstellationMap({
           cx={d.x}
           cy={d.y}
           r={d.r}
-          fill="#9D4EDD"
+          fill="#2a5550"
           initial={reduce ? false : { opacity: 0 }}
           animate={
             reduce
@@ -132,9 +132,9 @@ export function ConstellationMap({
               textAnchor="middle"
               fontSize={s.hero ? 11 : 9.5}
               fontWeight={s.hero ? 700 : 500}
-              fill={s.hero ? '#0F172A' : '#1E2937'}
+              fill={s.hero ? '#0f1f1f' : '#1a2e2e'}
               opacity={s.hero ? 0.92 : 0.66}
-              fontFamily="Poppins, system-ui, sans-serif"
+              fontFamily="Figtree, system-ui, sans-serif"
             >
               {s.label}
             </text>
