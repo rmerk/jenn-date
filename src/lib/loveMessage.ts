@@ -31,13 +31,13 @@ export function getLoveMessage(plan: LockedPlan): string {
 
   return `Hey Jennifer,
 
-Our night is ${dateStr} at ${timeStr}. I've been planning it.
+Our night is ${dateStr} at ${timeStr}. I'm planning it now.
 
-You said you'd love ${vibe} and ${food} for food. I've got it all planned.
+You said you'd love ${vibe} and ${food} for food. I'm building the night around that.
 ${foodSurprise ? '\nYou trusted me with food. I take that seriously.\n' : ''}
-I've got some ideas on this screen, but the plan is simple: no distractions, just us, doing what I put together for you.
+The plan is simple: no distractions, just us — whatever I'm putting together for you.
 
-Thanks for telling me what you wanted. Made planning this a lot more fun.
+Thanks for telling me what you wanted. Makes planning this a lot more fun.
 
 I love you.
 
@@ -48,12 +48,12 @@ const HINT_REACTIONS: Array<{ re: RegExp; make: (p: LockedPlan) => string }> = [
   {
     re: /forehead kiss/i,
     make: () =>
-      `You wrote about extra forehead kisses — done. The second you walk in.`,
+      `You wrote about extra forehead kisses — I'll be ready the second you walk in.`,
   },
   {
     re: /dumpling|sauce|jjajang/i,
     make: () =>
-      `I already got the dumpling sauce you like. It's in the fridge.`,
+      `I'm grabbing the dumpling sauce you like. It'll be waiting.`,
   },
   {
     re: /blanket|fort|cozy/i,
@@ -63,12 +63,12 @@ const HINT_REACTIONS: Array<{ re: RegExp; make: (p: LockedPlan) => string }> = [
   {
     re: /star|stargaz/i,
     make: () =>
-      `Found a good spot for stargazing. Good blanket, no checking the time.`,
+      `I'm scouting a good spot for stargazing. Soft blanket, no checking the time.`,
   },
   {
     re: /laugh|silly|giggle/i,
     make: () =>
-      `I've got a few dumb games lined up just to hear you laugh.`,
+      `I'm lining up a few dumb games just to hear you laugh.`,
   },
 ];
 
@@ -98,11 +98,11 @@ export function getHintExtraSentence(plan: { secretHint?: string }): string | nu
 
   const matched = HINT_REACTIONS.find((r) => r.re.test(hint));
   if (matched) {
-    if (/forehead kiss/i.test(hint)) return 'Forehead kisses the moment you walk in — already promised.';
-    if (/dumpling|sauce/i.test(hint)) return 'The good dumpling sauce is already in the fridge.';
+    if (/forehead kiss/i.test(hint)) return 'Forehead kisses the moment you walk in — promised.';
+    if (/dumpling|sauce/i.test(hint)) return "I'm grabbing the good dumpling sauce for you.";
     if (/blanket|fort/i.test(hint)) return 'Blanket fort is non-negotiable. No phones.';
-    if (/star|stargaz/i.test(hint)) return 'Found the dark-sky spot. Soft blanket packed.';
-    if (/laugh|silly/i.test(hint)) return 'A few dumb games are queued for that laugh.';
+    if (/star|stargaz/i.test(hint)) return "I'm finding the dark-sky spot. Soft blanket coming.";
+    if (/laugh|silly/i.test(hint)) return "I'm lining up a few dumb games for that laugh.";
   }
   return "I read your hint. I'm on it.";
 }

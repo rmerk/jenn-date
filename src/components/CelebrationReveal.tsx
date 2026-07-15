@@ -63,7 +63,7 @@ export function CelebrationReveal({
 
       {showLoveMessage && (
         <header className="text-center">
-          <p className="celeb-reveal__eyebrow">All set</p>
+          <h1 className="celeb-reveal__title">All set</h1>
         </header>
       )}
 
